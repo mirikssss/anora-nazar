@@ -1,0 +1,22 @@
+# Сотрудники узла для демо-входа. Два риск-менеджера — чтобы работал второй подписант.
+# Имена — названия должностей, без персональных данных.
+staff_users:
+  - code: analyst-1
+    role: fraud_analyst
+    display_name: Аналитик антифрод-центра
+    division: Антифрод-центр, головной офис
+
+  - code: control-1
+    role: internal_control
+    display_name: Специалист внутреннего контроля
+    division: Служба внутреннего контроля, головной офис
+
+  - code: risk-1
+    role: risk_manager
+    display_name: Риск-менеджер
+    division: Департамент рисков, головной офис
+
+  - code: risk-2
+    role: risk_manager
+    display_name: Риск-менеджер, второй подписант
+    division: Департамент рисков, головной офис

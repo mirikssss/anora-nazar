@@ -1,0 +1,47 @@
+# Роли сотрудников узла — по Блоку 4 «Роли и права решений».
+# Коды прав — предложение, согласуется с владельцем вместе с первой реализацией модуля identity.
+roles:
+  - code: fraud_analyst
+    title: Аналитик антифрод-центра
+    home_path: /analyst
+    summary: Очередь онлайн-канала (зона 1 и Т3); снимает паузу или отменяет заявку, ставит исход проверки.
+    permissions:
+      - decisions.view
+      - cases.online.view
+      - cases.online.decide
+      - pauses.lift
+      - pii.full.view
+    restrictions:
+      - Не меняет правила и пороги.
+
+  - code: internal_control
+    title: Внутренний контроль
+    home_path: /control
+    summary: Дела зон 2–3; удержание и отпуск по каждой заявке, роли участников, исход дела, ретро-поиск.
+    permissions:
+      - decisions.view
+      - cases.group.view
+      - cases.group.decide
+      - holds.manage
+      - participants.assign_role
+      - retro_search.run
+      - pii.full.view
+    restrictions:
+      - Не ведёт дела о себе и о своём подразделении.
+
+  - code: risk_manager
+    title: Риск-менеджер
+    home_path: /risk
+    summary: Качество моделей, доли уровней, дрейф, журнал; пороги и версии моделей — со вторым подписантом.
+    permissions:
+      - decisions.view
+      - quality.view
+      - policy.propose
+      - policy.approve
+      - models.promote
+      - network.manage
+      - audit.view
+      - audit.verify
+    restrictions:
+      - Не видит персональные данные сверх нужного.
+      - Не подтверждает собственное предложение: второй подписант — другой сотрудник.

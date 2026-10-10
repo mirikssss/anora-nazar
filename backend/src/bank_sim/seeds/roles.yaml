@@ -1,0 +1,25 @@
+# Роли имитатора банка. Это не пользователи узла: заёмщик работает в приложении банка,
+# сотрудник банка — в конвейере и АБС. Коды прав — предложение, согласуется с владельцем.
+roles:
+  - code: borrower
+    title: Заёмщик
+    home_path: /borrower
+    summary: Клиент банка в мобильном приложении; персона выбирается из синтетических клиентов.
+    permissions:
+      - applications.online.submit
+      - applications.own.view
+      - intent.answer
+      - pressure.report
+      - complaints.submit
+    restrictions:
+      - Не снимает паузу из той же сессии.
+
+  - code: bank_officer
+    title: Сотрудник банка
+    home_path: /bank/conveyor
+    summary: Имитатор кредитного конвейера и АБС; подаёт заявки обоих каналов, исполняет по разрешению, включает сбои.
+    permissions:
+      - applications.submit
+      - scenarios.run
+      - core_banking.execute
+      - failures.inject
