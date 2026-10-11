@@ -77,7 +77,7 @@ scenarios:
     zone: 1
     title: Нетипичная заявка — проверка намерения
     summary: >-
-      Доступ восстановили за три часа до заявки, устройство новое, кредит — первый, сумма вчетверо выше
+      Доступ восстановили за три часа до заявки, устройство новое, кредит — первый, сумма втрое выше
       обычных трат. Звонка и удалённого доступа нет: сигналы есть, но без явного давления.
     expected: {level: yellow, action: intent_check}
     expected_summary: >-
@@ -94,7 +94,7 @@ scenarios:
         channel: online
         branch: online
         people: [client]
-        loan: {amount: 6300000, term_months: 12}
+        loan: {amount: 5000000, term_months: 12}  # 11.10.2026 под модели world-v2: p≈0,5, стоимость риска ниже аппетита — жёлтый; после переобучения проверить
         session: {device_age_days: 1, access_recovered_minutes_before: 180, form_seconds: 150, pasted: false}
 
   - code: zone2_second_branch

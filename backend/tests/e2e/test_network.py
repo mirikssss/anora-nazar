@@ -30,9 +30,9 @@ def _enable_network(sandbox: Sandbox) -> None:
     proposal = sandbox.node.post(
         "/v1/policy/proposals", headers=risk1, json={"changes": {"network.enabled": True}, "reason": "Пилот сети"}
     )
-    assert proposal.status_code == 200, proposal.text
+    assert proposal.is_success, proposal.text
     approval = sandbox.node.post(f"/v1/policy/proposals/{proposal.json()['proposal_id']}/approval", headers=risk2)
-    assert approval.status_code == 200, approval.text
+    assert approval.is_success, approval.text
 
 
 def test_network_switch_changes_the_outcome(sandbox: Sandbox) -> None:
@@ -54,13 +54,13 @@ def test_main_scenario_through_network(sandbox: Sandbox) -> None:
     app = _client_app(_run(sandbox, "network_main"))
     assert app["level"] == "green"
     deadline = time.monotonic() + WAIT_SECONDS
-    while True:
-        result = sandbox.try_execute(app["application_id"]).json()
-        refusal = (result.get("refusal") or {}).get("code")
-        if refusal == "reassessment_required" or time.monotonic() > deadline:
+    while True:  # уведомление оператора и пометка узла идут фоновыми тактами — посетитель нажимает АБС позже
+        state = sandbox.bank.get(f"/v1/conveyor/applications/{app['application_id']}", headers=sandbox.headers)
+        if state.json()["node_state"] == "reassessment_required" or time.monotonic() > deadline:
             break
         time.sleep(1)
-    assert refusal == "reassessment_required", result
+    result = sandbox.execute(app["application_id"])
+    assert (result.get("refusal") or {}).get("code") == "reassessment_required", result
     decision = sandbox.reassess(app["application_id"])["last_decision"]
     assert decision["level"] == "yellow", decision
     assert {"NETWORK_SHARED_PHONE", "NETWORK_SHARED_DEVICE"} <= {r["code"] for r in decision["reasons"]}

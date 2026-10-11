@@ -94,6 +94,7 @@ class Stand:
         headers: dict[str, str] | None = None,
         body: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
+        denial_expected: bool = False,
     ) -> httpx.Response:
         started = time.perf_counter()
         response = await self.services[service].request(method, path, headers=headers, json=body, params=params)
@@ -101,7 +102,13 @@ class Stand:
         self.report.samples.append(sample)
         if response.status_code == 429:
             self.report.failures.append(f"лимит шлюза (429): {sample.route} — для прогона поднимите GATEWAY_API_*")
+        elif 400 <= response.status_code < 500 and not denial_expected:
+            self.report.failures.append(f"{response.status_code} в обычном пути: {sample.route} {response.text[:200]}")
         return response
+
+    async def probe(self, method: str, service: str, path: str, route: str, **kwargs: Any) -> httpx.Response:
+        """Запрос, где отказ (403, 404) — ожидаемый ответ: чужие записи, удалённая песочница."""
+        return await self.call(method, service, path, route, denial_expected=True, **kwargs)
 
 
 def _digits(count: int) -> str:
@@ -147,7 +154,8 @@ async def start(stand: Stand, world: World, visitor: Visitor) -> None:
         )
         visitor.tokens[role] = login.raise_for_status().json()["token"]
     await stand.call("GET", "bank", "/v1/roles", "/v1/roles")
-    await stand.call("GET", "node", "/v1/texts", "/v1/texts", headers=visitor.staff("analyst"))
+    for audience in ("staff", "client"):
+        await stand.call("GET", "node", "/v1/texts", "/v1/texts", params={"audience": audience})
 
 
 def _remember(visitor: Visitor, application: dict[str, Any]) -> None:
@@ -225,9 +233,10 @@ async def staff_screens(stand: Stand, visitor: Visitor) -> None:
         if listed.status_code != 200:
             stand.report.fail(visitor.number, f"очередь {queue}: {listed.status_code}")
             continue
-        visitor.cases.extend(c["case_id"] for c in listed.json())
-    for case_id in visitor.cases[:2]:
-        await stand.call("GET", "node", f"/v1/cases/{case_id}", "/v1/cases/{id}", headers=visitor.staff("control"))
+        cases = [c["case_id"] for c in listed.json()]
+        visitor.cases.extend(cases)
+        if cases:
+            await stand.call("GET", "node", f"/v1/cases/{cases[0]}", "/v1/cases/{id}", headers=visitor.staff(role))
     if visitor.decisions:
         await stand.call(
             "GET",
@@ -253,13 +262,13 @@ async def isolation(stand: Stand, visitor: Visitor, other: Visitor) -> None:
             stand,
             visitor,
             f"заявка узла {app_id}",
-            await stand.call("GET", "node", f"/v1/applications/{app_id}", "/v1/applications/{id}", headers=analyst),
+            await stand.probe("GET", "node", f"/v1/applications/{app_id}", "/v1/applications/{id}", headers=analyst),
         )
         await expect_hidden(
             stand,
             visitor,
             f"заявка конвейера {app_id}",
-            await stand.call(
+            await stand.probe(
                 "GET",
                 "bank",
                 f"/v1/conveyor/applications/{app_id}",
@@ -271,7 +280,7 @@ async def isolation(stand: Stand, visitor: Visitor, other: Visitor) -> None:
             stand,
             visitor,
             f"зачисление по чужой заявке {app_id}",
-            await stand.call(
+            await stand.probe(
                 "POST",
                 "bank",
                 "/v1/core-banking/operations",
@@ -285,20 +294,20 @@ async def isolation(stand: Stand, visitor: Visitor, other: Visitor) -> None:
             stand,
             visitor,
             f"решение {decision_id}",
-            await stand.call("GET", "node", f"/v1/decisions/{decision_id}", "/v1/decisions/{id}", headers=analyst),
+            await stand.probe("GET", "node", f"/v1/decisions/{decision_id}", "/v1/decisions/{id}", headers=analyst),
         )
     for case_id in other.cases[:2]:
         await expect_hidden(
             stand,
             visitor,
             f"дело {case_id}",
-            await stand.call("GET", "node", f"/v1/cases/{case_id}", "/v1/cases/{id}", headers=control),
+            await stand.probe("GET", "node", f"/v1/cases/{case_id}", "/v1/cases/{id}", headers=control),
         )
         await expect_hidden(
             stand,
             visitor,
             f"назначение дела {case_id}",
-            await stand.call(
+            await stand.probe(
                 "POST", "node", f"/v1/cases/{case_id}/assignment", "/v1/cases/{id}/assignment", headers=control
             ),
         )
@@ -307,7 +316,7 @@ async def isolation(stand: Stand, visitor: Visitor, other: Visitor) -> None:
             stand,
             visitor,
             f"операция АБС {key}",
-            await stand.call(
+            await stand.probe(
                 "GET",
                 "bank",
                 f"/v1/core-banking/operations/{key}",
@@ -319,7 +328,7 @@ async def isolation(stand: Stand, visitor: Visitor, other: Visitor) -> None:
         stand,
         visitor,
         "токен сотрудника с чужой песочницей",
-        await stand.call(
+        await stand.probe(
             "GET",
             "node",
             "/v1/cases",
@@ -332,7 +341,7 @@ async def isolation(stand: Stand, visitor: Visitor, other: Visitor) -> None:
         stand,
         visitor,
         "ключ системы заменён токеном сотрудника",
-        await stand.call(
+        await stand.probe(
             "DELETE", "node", f"/v1/realms/{other.realm}", "/v1/realms/{id}", headers=visitor.staff("risk")
         ),
     )
@@ -374,13 +383,13 @@ async def reset(stand: Stand, world: World, visitor: Visitor) -> None:
         stand.report.fail(visitor.number, f"сброс песочницы: {deleted.status_code} {deleted.text[:200]}")
         return
     after = [
-        await stand.call(
+        await stand.probe(
             "GET", "bank", "/v1/conveyor/applications", "/v1/conveyor/applications", headers=visitor.realm_headers
         ),
-        await stand.call(
+        await stand.probe(
             "GET", "node", "/v1/cases", "/v1/cases", headers=visitor.staff("analyst"), params={"queue": "online"}
         ),
-        await stand.call(
+        await stand.probe(
             "POST",
             "node",
             "/v1/auth/demo-login",
