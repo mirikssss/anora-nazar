@@ -1,0 +1,19 @@
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row {
+  height: var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-gray-6);
+}
+
+.row:nth-child(3n + 2) {
+  width: 80%;
+}
+
+.row:nth-child(3n) {
+  width: 60%;
+}

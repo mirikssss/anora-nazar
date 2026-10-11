@@ -1,0 +1,4 @@
+dist
+openapi
+package-lock.json
+*.md

@@ -17,4 +17,14 @@
 
 ## Команды
 
-Появятся вместе с кодом.
+Всё через Docker из корня репозитория (CLAUDE.md, правило 7):
+
+| Что | Команда |
+| --- | --- |
+| стенд с интерфейсом | `docker compose up --build -d`, интерфейс — http://localhost:5180 |
+| проверки: eslint, prettier, tsc, сборка | `docker compose --profile test run --rm web-check` |
+| обновить OpenAPI и типы после смены API бэка | `docker compose exec web npm run api:pull` и `docker compose exec web npm run gen:api` |
+
+Адреса сервисов и часовой пояс задаёт compose (`VITE_*`, `WEB_*`). Интерфейс ходит в узел и имитатор банка через один адрес: `/api/node`, `/api/bank`. Порт 5180 на хосте выбран потому, что 5173 занят другим проектом.
+
+План и статус — `ITERATIONS.md`.

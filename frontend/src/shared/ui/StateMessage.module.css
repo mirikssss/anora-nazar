@@ -1,0 +1,32 @@
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-5);
+  border-radius: var(--radius);
+  background: var(--color-gray-6);
+}
+
+.icon {
+  margin-bottom: var(--space-1);
+  color: var(--color-gray);
+}
+
+.error .icon {
+  color: var(--color-red);
+}
+
+.title {
+  font-weight: var(--weight-semibold);
+}
+
+.description {
+  color: var(--color-gray);
+  font-size: var(--text-sm);
+  max-width: var(--reading-max);
+}
+
+.action {
+  margin-top: var(--space-3);
+}

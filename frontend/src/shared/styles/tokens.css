@@ -1,1 +1,86 @@
-/* Токены: цвета iOS, скругление 20px, отступы, брейкпоинты, длительности переходов. */
+/* Токены вида — единственное место значений. Цвета — системные iOS, светлая тема (CLAUDE.md). */
+:root {
+  --color-bg: #ffffff;
+  --color-text: #000000;
+  --color-gray: #8e8e93;
+  --color-gray-2: #aeaeb2;
+  --color-gray-3: #c7c7cc;
+  --color-gray-4: #d1d1d6;
+  --color-gray-5: #e5e5ea;
+  --color-gray-6: #f2f2f7;
+  --color-green: #34c759;
+  --color-yellow: #ffcc00;
+  --color-orange: #ff9500;
+  --color-red: #ff3b30;
+  --color-blue: #007aff;
+
+  /* Акцент банка — только на главной кнопке; у пилота меняется здесь (решение владельца). */
+  --color-accent: var(--color-text);
+  --color-on-accent: var(--color-bg);
+
+  /* Текст на подложке состояния: на жёлтой и зелёной — чёрный, на красной — белый. */
+  --color-on-green: var(--color-text);
+  --color-on-yellow: var(--color-text);
+  --color-on-red: var(--color-bg);
+
+  --font-text:
+    "Wix Madefor Text Variable", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+    sans-serif;
+  --font-display:
+    "Wix Madefor Display Variable", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto,
+    sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --leading-tight: 1.25;
+  --leading: 1.45;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --gutter: var(--space-4);
+
+  --radius: 20px;
+  --radius-pill: 999px;
+  --border: 1px solid var(--color-gray-4);
+  --divider: 1px solid var(--color-gray-5);
+
+  /* Плотность сотрудников — строка 32–40 px (IBM Carbon); заёмщику — крупные касания. */
+  --row-height: 2.5rem;
+  --control-height: 2.75rem;
+  --control-height-sm: 2.25rem;
+  --header-height: 3.5rem;
+  --content-max: 90rem;
+  --reading-max: 42rem;
+  --phone-width: 24.375rem;
+  --phone-height: 50rem;
+
+  --duration-fast: 150ms;
+  --duration: 200ms;
+  --duration-slow: 250ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-blue) 35%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration: 0ms;
+    --duration-slow: 0ms;
+  }
+}

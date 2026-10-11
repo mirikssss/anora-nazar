@@ -1,0 +1,1900 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Anora Nazar · имитатор банка",
+    "version": "1.0"
+  },
+  "paths": {
+    "/v1/system/health": {
+      "get": {
+        "tags": [
+          "Система"
+        ],
+        "summary": "Health",
+        "operationId": "health_v1_system_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health V1 System Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sandboxes": {
+      "post": {
+        "tags": [
+          "Песочница"
+        ],
+        "summary": "Create",
+        "description": "Песочница появляется сначала в узле, потом здесь; первая отметка очереди уходит сразу.",
+        "operationId": "create_v1_sandboxes_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SandboxOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sandboxes/current": {
+      "delete": {
+        "tags": [
+          "Песочница"
+        ],
+        "summary": "Reset",
+        "operationId": "reset_v1_sandboxes_current_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/v1/roles": {
+      "get": {
+        "tags": [
+          "Роли"
+        ],
+        "summary": "List Roles",
+        "operationId": "list_roles_v1_roles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BankRoleOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Roles V1 Roles Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/staff/branches": {
+      "get": {
+        "tags": [
+          "Филиалы"
+        ],
+        "summary": "List Branches",
+        "operationId": "list_branches_v1_staff_branches_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BranchOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Branches V1 Staff Branches Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sources/self-bans": {
+      "put": {
+        "tags": [
+          "Источники"
+        ],
+        "summary": "Set Self Ban",
+        "operationId": "set_self_ban_v1_sources_self_bans_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfBanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sources/registry/{pinfl}": {
+      "get": {
+        "tags": [
+          "Источники"
+        ],
+        "summary": "Registry",
+        "operationId": "registry_v1_sources_registry__pinfl__get",
+        "parameters": [
+          {
+            "name": "pinfl",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pinfl"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/events": {
+      "post": {
+        "tags": [
+          "Сессии приложения"
+        ],
+        "summary": "Report",
+        "operationId": "report_v1_sessions_events_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionEventIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionEventOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/conveyor/applications": {
+      "get": {
+        "tags": [
+          "Конвейер"
+        ],
+        "summary": "List Applications",
+        "operationId": "list_applications_v1_conveyor_applications_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Applications V1 Conveyor Applications Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Конвейер"
+        ],
+        "summary": "Create",
+        "description": "Заявка проходит обязательные шаги, затем конвейер спрашивает оценку узла (Т1 или Т4).",
+        "operationId": "create_v1_conveyor_applications_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/conveyor/applications/{application_id}/assessments": {
+      "post": {
+        "tags": [
+          "Конвейер"
+        ],
+        "summary": "Reassess",
+        "operationId": "reassess_v1_conveyor_applications__application_id__assessments_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/conveyor/applications/{application_id}": {
+      "patch": {
+        "tags": [
+          "Конвейер"
+        ],
+        "summary": "Change",
+        "operationId": "change_v1_conveyor_applications__application_id__patch",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Конвейер"
+        ],
+        "summary": "Get Application",
+        "operationId": "get_application_v1_conveyor_applications__application_id__get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/conveyor/applications/{application_id}/cancel": {
+      "post": {
+        "tags": [
+          "Конвейер"
+        ],
+        "summary": "Cancel",
+        "operationId": "cancel_v1_conveyor_applications__application_id__cancel_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/node/applications/{application_id}/snapshot": {
+      "get": {
+        "tags": [
+          "Конвейер"
+        ],
+        "summary": "Snapshot For Node",
+        "description": "Актуальный снимок по запросу узла, когда он ждёт пропущенную версию.",
+        "operationId": "snapshot_for_node_v1_node_applications__application_id__snapshot_get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/core-banking/operations": {
+      "get": {
+        "tags": [
+          "АБС"
+        ],
+        "summary": "List Operations",
+        "operationId": "list_operations_v1_core_banking_operations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OperationOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Operations V1 Core Banking Operations Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "АБС"
+        ],
+        "summary": "Execute",
+        "operationId": "execute_v1_core_banking_operations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/core-banking/operations/{operation_key}": {
+      "get": {
+        "tags": [
+          "АБС"
+        ],
+        "summary": "Get Operation",
+        "operationId": "get_operation_v1_core_banking_operations__operation_key__get",
+        "parameters": [
+          {
+            "name": "operation_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Operation Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/node/operations/{operation_key}": {
+      "get": {
+        "tags": [
+          "АБС"
+        ],
+        "summary": "Status For Node",
+        "operationId": "status_for_node_v1_node_operations__operation_key__get",
+        "parameters": [
+          {
+            "name": "operation_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Operation Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationStatusOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/failures": {
+      "get": {
+        "tags": [
+          "Сбои"
+        ],
+        "summary": "Get Flags",
+        "operationId": "get_flags_v1_failures_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Flags"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Сбои"
+        ],
+        "summary": "Set Flags",
+        "operationId": "set_flags_v1_failures_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlagsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Flags"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/failures/repeat-with-other-amount": {
+      "post": {
+        "tags": [
+          "Сбои"
+        ],
+        "summary": "Repeat With Other Amount",
+        "operationId": "repeat_with_other_amount_v1_failures_repeat_with_other_amount_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepeatIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepeatOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/node/notifications": {
+      "post": {
+        "tags": [
+          "Уведомления узла"
+        ],
+        "summary": "Accept",
+        "operationId": "accept_v1_node_notifications_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "type": "object",
+                  "title": "Response Accept V1 Node Notifications Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notifications": {
+      "get": {
+        "tags": [
+          "Уведомления узла"
+        ],
+        "summary": "Feed",
+        "operationId": "feed_v1_notifications_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationOut"
+                  },
+                  "title": "Response Feed V1 Notifications Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Applicant": {
+        "properties": {
+          "pinfl": {
+            "type": "string",
+            "title": "Pinfl"
+          },
+          "phone": {
+            "type": "string",
+            "title": "Phone"
+          },
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "employer_inn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employer Inn"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "pinfl",
+          "phone"
+        ],
+        "title": "Applicant"
+      },
+      "ApplicationChange": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "term_months": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 600.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term Months"
+          },
+          "disbursement_account": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disbursement Account"
+          },
+          "supplier_account": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supplier Account"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Price"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ApplicationChange",
+        "description": "Изменение условий — новая версия заявки; прежняя оценка становится устаревшей."
+      },
+      "ApplicationDraft": {
+        "properties": {
+          "channel": {
+            "type": "string",
+            "enum": [
+              "online",
+              "program"
+            ],
+            "title": "Channel"
+          },
+          "branch_id": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Branch Id"
+          },
+          "employee_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee Id"
+          },
+          "applicant": {
+            "$ref": "#/components/schemas/Applicant"
+          },
+          "loan": {
+            "$ref": "#/components/schemas/Loan"
+          },
+          "disbursement_account": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disbursement Account"
+          },
+          "program": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgramDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "checks": {
+            "$ref": "#/components/schemas/SimulatedChecks"
+          },
+          "session_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Session Refs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "channel",
+          "branch_id",
+          "applicant",
+          "loan",
+          "checks"
+        ],
+        "title": "ApplicationDraft"
+      },
+      "ApplicationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "node_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node State"
+          },
+          "snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Snapshot"
+          },
+          "last_decision": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Decision"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "channel",
+          "version",
+          "status",
+          "node_state",
+          "snapshot",
+          "last_decision",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ApplicationOut"
+      },
+      "BankRoleOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "home_path": {
+            "type": "string",
+            "title": "Home Path"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Permissions"
+          },
+          "restrictions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Restrictions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "title",
+          "home_path",
+          "summary",
+          "permissions",
+          "restrictions"
+        ],
+        "title": "BankRoleOut"
+      },
+      "BranchOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "district": {
+            "type": "string",
+            "title": "District"
+          },
+          "employees": {
+            "items": {
+              "$ref": "#/components/schemas/EmployeeOut"
+            },
+            "type": "array",
+            "title": "Employees"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "district",
+          "employees"
+        ],
+        "title": "BranchOut"
+      },
+      "EmployeeOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "display_name",
+          "role"
+        ],
+        "title": "EmployeeOut"
+      },
+      "Flags": {
+        "properties": {
+          "lose_outcome": {
+            "type": "boolean",
+            "title": "Lose Outcome",
+            "description": "АБС проводит операцию, но итог в узел не доходит"
+          },
+          "node_unavailable": {
+            "type": "boolean",
+            "title": "Node Unavailable",
+            "description": "Узел недоступен: заявки ждут, деньги не двигаются"
+          },
+          "queue_lag": {
+            "type": "boolean",
+            "title": "Queue Lag",
+            "description": "Очередь событий в узел стоит"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lose_outcome",
+          "node_unavailable",
+          "queue_lag"
+        ],
+        "title": "Flags"
+      },
+      "FlagsPatch": {
+        "properties": {
+          "lose_outcome": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lose Outcome"
+          },
+          "node_unavailable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Unavailable"
+          },
+          "queue_lag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queue Lag"
+          }
+        },
+        "type": "object",
+        "title": "FlagsPatch"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Loan": {
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount"
+          },
+          "term_months": {
+            "type": "integer",
+            "maximum": 600.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Term Months"
+          },
+          "purpose": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "amount",
+          "term_months"
+        ],
+        "title": "Loan"
+      },
+      "NotificationIn": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "realm_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Realm Id"
+          },
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "realm_id",
+          "topic",
+          "payload",
+          "created_at"
+        ],
+        "title": "NotificationIn"
+      },
+      "NotificationOut": {
+        "properties": {
+          "message_id": {
+            "type": "integer",
+            "title": "Message Id"
+          },
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Received At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message_id",
+          "topic",
+          "payload",
+          "received_at"
+        ],
+        "title": "NotificationOut"
+      },
+      "NotificationsIn": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationIn"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "title": "Messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "messages"
+        ],
+        "title": "NotificationsIn"
+      },
+      "OperationIn": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Application Id"
+          },
+          "operation_type": {
+            "type": "string",
+            "enum": [
+              "disbursement",
+              "supplier_payment"
+            ],
+            "title": "Operation Type"
+          },
+          "tranche": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Tranche",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "operation_type"
+        ],
+        "title": "OperationIn"
+      },
+      "OperationOut": {
+        "properties": {
+          "operation_key": {
+            "type": "string",
+            "title": "Operation Key"
+          },
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "application_version": {
+            "type": "integer",
+            "title": "Application Version"
+          },
+          "operation_type": {
+            "type": "string",
+            "title": "Operation Type"
+          },
+          "tranche": {
+            "type": "integer",
+            "title": "Tranche"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "account": {
+            "type": "string",
+            "title": "Account"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "permit": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permit"
+          },
+          "refusal": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refusal"
+          },
+          "outcome_reported": {
+            "type": "boolean",
+            "title": "Outcome Reported"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation_key",
+          "application_id",
+          "application_version",
+          "operation_type",
+          "tranche",
+          "amount",
+          "account",
+          "status",
+          "permit",
+          "refusal",
+          "outcome_reported",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "OperationOut"
+      },
+      "OperationStatusOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "executed",
+              "not_executed",
+              "in_progress"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "OperationStatusOut"
+      },
+      "ProgramDetails": {
+        "properties": {
+          "helper_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Helper Id"
+          },
+          "supplier_inn": {
+            "type": "string",
+            "title": "Supplier Inn"
+          },
+          "supplier_account": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Supplier Account"
+          },
+          "item_code": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Item Code"
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Unit"
+          },
+          "unit_price": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Unit Price"
+          },
+          "quantity": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Quantity"
+          },
+          "district": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "District"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "helper_id",
+          "supplier_inn",
+          "supplier_account",
+          "item_code",
+          "unit",
+          "unit_price",
+          "quantity",
+          "district"
+        ],
+        "title": "ProgramDetails"
+      },
+      "RegistryOut": {
+        "properties": {
+          "pinfl": {
+            "type": "string",
+            "title": "Pinfl"
+          },
+          "self_ban": {
+            "type": "string",
+            "enum": [
+              "active",
+              "none"
+            ],
+            "title": "Self Ban"
+          },
+          "bureau": {
+            "type": "string",
+            "enum": [
+              "free",
+              "blocked"
+            ],
+            "title": "Bureau"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pinfl",
+          "self_ban",
+          "bureau"
+        ],
+        "title": "RegistryOut"
+      },
+      "RepeatIn": {
+        "properties": {
+          "operation_key": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Operation Key"
+          },
+          "amount": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "description": "Другая сумма для того же ключа операции"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation_key",
+          "amount"
+        ],
+        "title": "RepeatIn"
+      },
+      "RepeatOut": {
+        "properties": {
+          "node_status_code": {
+            "type": "integer",
+            "title": "Node Status Code"
+          },
+          "node_response": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Node Response"
+          }
+        },
+        "type": "object",
+        "required": [
+          "node_status_code",
+          "node_response"
+        ],
+        "title": "RepeatOut"
+      },
+      "SandboxOut": {
+        "properties": {
+          "realm_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Realm Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "realm_id"
+        ],
+        "title": "SandboxOut"
+      },
+      "SelfBanIn": {
+        "properties": {
+          "pinfl": {
+            "type": "string",
+            "pattern": "^\\d{14}$",
+            "title": "Pinfl"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "lifted"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pinfl",
+          "status"
+        ],
+        "title": "SelfBanIn"
+      },
+      "SessionEventIn": {
+        "properties": {
+          "pinfl": {
+            "type": "string",
+            "pattern": "^\\d{14}$",
+            "title": "Pinfl"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "new_device",
+              "access_recovery",
+              "remote_control"
+            ],
+            "title": "Event Type"
+          },
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pinfl",
+          "event_type"
+        ],
+        "title": "SessionEventIn"
+      },
+      "SessionEventOut": {
+        "properties": {
+          "session_event_id": {
+            "type": "string",
+            "title": "Session Event Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_event_id"
+        ],
+        "title": "SessionEventOut"
+      },
+      "SimulatedChecks": {
+        "properties": {
+          "biometry": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed"
+            ],
+            "title": "Biometry"
+          },
+          "phone_owner_match": {
+            "type": "boolean",
+            "title": "Phone Owner Match"
+          }
+        },
+        "type": "object",
+        "required": [
+          "biometry",
+          "phone_owner_match"
+        ],
+        "title": "SimulatedChecks",
+        "description": "Итоги проверок, которые в банке делают MyID и оператор связи; в демо их задаёт проверяющий."
+      },
+      "SnapshotOut": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Snapshot"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "snapshot"
+        ],
+        "title": "SnapshotOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

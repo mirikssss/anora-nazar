@@ -1,0 +1,115 @@
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.skip {
+  position: absolute;
+  left: var(--gutter);
+  top: -10rem;
+  z-index: 30;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+.skip:focus {
+  top: var(--space-2);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: var(--border);
+  background: var(--color-bg);
+}
+
+.bar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "home tools"
+    "nav nav";
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-2) var(--gutter);
+}
+
+.home {
+  grid-area: home;
+  display: inline-flex;
+  min-height: var(--control-height-sm);
+  align-items: center;
+}
+
+.home:hover {
+  text-decoration: none;
+}
+
+.nav {
+  grid-area: nav;
+  display: flex;
+  gap: var(--space-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height-sm);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  color: var(--color-gray);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.link:hover {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.active {
+  background: var(--color-gray-6);
+  color: var(--color-text);
+}
+
+.tools {
+  grid-area: tools;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-5) var(--gutter) var(--space-7);
+}
+
+@media (--desktop) {
+  .bar {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas: "home nav tools";
+    min-height: var(--header-height);
+    padding-block: 0;
+  }
+
+  .main {
+    padding-top: var(--space-6);
+  }
+}

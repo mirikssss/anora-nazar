@@ -1,0 +1,25 @@
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: var(--divider);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.label {
+  color: var(--color-gray);
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}

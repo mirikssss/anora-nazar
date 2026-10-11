@@ -1,0 +1,11 @@
+.columns {
+  display: grid;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (--desktop) {
+  .columns {
+    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  }
+}

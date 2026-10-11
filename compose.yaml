@@ -114,6 +114,51 @@ services:
       <<: *health
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/v1/system/health')"]
 
+  # Интерфейс всех ролей: Vite с прокси на один адрес; код томом, пересборка — при смене зависимостей.
+  web:
+    build:
+      context: ./frontend
+      target: dev
+    image: anora-nazar-web:dev
+    restart: unless-stopped
+    depends_on:
+      node: {condition: service_healthy}
+      bank-sim: {condition: service_healthy}
+    environment: &web-env
+      WEB_PORT: 5173
+      VITE_NODE_API_BASE: /api/node
+      VITE_BANK_API_BASE: /api/bank
+      VITE_TIME_ZONE: Asia/Tashkent
+      WEB_NODE_UPSTREAM: http://node:8000
+      WEB_BANK_UPSTREAM: http://bank-sim:8001
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/openapi:/app/openapi
+      - ./frontend/scripts:/app/scripts:ro
+      - ./frontend/index.html:/app/index.html:ro
+      - ./frontend/vite.config.ts:/app/vite.config.ts:ro
+      - ./frontend/postcss.config.js:/app/postcss.config.js:ro
+      - ./frontend/eslint.config.js:/app/eslint.config.js:ro
+    ports:
+      - "127.0.0.1:5180:5173"
+
+  # Проверки фронта: eslint, prettier, tsc, сборка. docker compose --profile test run --rm web-check
+  web-check:
+    build:
+      context: ./frontend
+      target: dev
+    image: anora-nazar-web:dev
+    profiles: [test]
+    environment: *web-env
+    volumes:
+      - ./frontend/src:/app/src:ro
+      - ./frontend/openapi:/app/openapi:ro
+      - ./frontend/index.html:/app/index.html:ro
+      - ./frontend/vite.config.ts:/app/vite.config.ts:ro
+      - ./frontend/postcss.config.js:/app/postcss.config.js:ro
+      - ./frontend/eslint.config.js:/app/eslint.config.js:ro
+    command: ["npm", "run", "check"]
+
   tests:
     build:
       context: ./backend
