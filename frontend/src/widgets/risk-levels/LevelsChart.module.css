@@ -1,0 +1,133 @@
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  list-style: none;
+  color: var(--color-gray);
+  font-size: var(--text-sm);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.swatch {
+  display: inline-block;
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
+
+/* Цвет — только у уровней; остановленные по норме — серым: это не уровень узла. */
+.green {
+  fill: var(--color-green);
+  color: var(--color-green);
+}
+
+.yellow {
+  fill: var(--color-yellow);
+  color: var(--color-yellow);
+}
+
+.red {
+  fill: var(--color-red);
+  color: var(--color-red);
+}
+
+.stopped {
+  fill: var(--color-gray-2);
+  color: var(--color-gray-2);
+}
+
+.plot {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.plot svg {
+  display: block;
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--color-gray-5);
+  stroke-width: 1;
+}
+
+.axis line {
+  stroke: var(--color-gray-4);
+}
+
+.axis text {
+  fill: var(--color-gray);
+  font-family: var(--font-text);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.hit {
+  fill: transparent;
+}
+
+.dimmed {
+  opacity: 0.45;
+  transition: opacity var(--duration-fast) var(--ease);
+}
+
+.tooltip {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  min-width: 11rem;
+  padding: var(--space-3);
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  font-size: var(--text-sm);
+  pointer-events: none;
+}
+
+.tooltipTitle {
+  margin-bottom: var(--space-2);
+  font-weight: var(--weight-semibold);
+}
+
+.tooltipList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.tooltipRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.tooltipRow dt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-gray);
+}
+
+.tooltipTotal {
+  padding-top: var(--space-1);
+  border-top: var(--divider);
+  font-weight: var(--weight-semibold);
+}
+
+.tooltipTotal dt {
+  color: var(--color-text);
+}

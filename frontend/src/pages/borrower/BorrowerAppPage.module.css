@@ -1,0 +1,32 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.side {
+  min-width: 0;
+}
+
+@media (--tablet) {
+  .layout {
+    align-items: center;
+  }
+
+  .side {
+    width: 100%;
+    max-width: var(--reading-max);
+  }
+}
+
+@media (--desktop) {
+  .layout {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .side {
+    max-width: none;
+  }
+}

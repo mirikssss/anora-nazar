@@ -13,6 +13,8 @@ import styles from "./AppShell.module.css";
 export interface NavItem {
   to: string;
   label: string;
+  /** Активен только на точном пути: «Обзор» /risk не подсвечивается на /risk/models. */
+  end?: boolean;
 }
 
 interface AppShellProps {
@@ -38,7 +40,7 @@ export function AppShell({ nav, children }: AppShellProps) {
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  end
+                  end={item.end === true}
                   className={({ isActive }) => [styles.link, isActive ? styles.active : ""].join(" ")}
                 >
                   {item.label}

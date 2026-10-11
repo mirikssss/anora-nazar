@@ -1,0 +1,23 @@
+.wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  max-width: 100%;
+}
+
+.note {
+  color: var(--color-gray);
+  font-size: var(--text-sm);
+  text-align: right;
+}
+
+@media (--phone-only) {
+  .wrap {
+    align-items: flex-start;
+  }
+
+  .note {
+    text-align: left;
+  }
+}

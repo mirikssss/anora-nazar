@@ -1,5 +1,6 @@
 // Заявка конвейера банка: что видит имитатор и что ответил узел.
 import type { BankSchemas } from "@/shared/api";
+import { isObject, num, obj, str, type Json } from "@/shared/lib/json";
 
 import { parseResult, type DecisionResult } from "@/entities/decision";
 
@@ -12,10 +13,6 @@ export interface LastDecision extends DecisionResult {
   point: string | null;
   holds: { holdId: string; requiredCheck: string }[];
   marked: string[];
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** last_decision — ответ узла (DecisionOut), сохранённый конвейером как JSON. */
@@ -45,27 +42,19 @@ interface SnapshotView {
   branchId: string | null;
   employeeId: string | null;
   account: string | null;
-  mandatory: Record<string, unknown> | null;
-  program: Record<string, unknown> | null;
+  mandatory: Json | null;
+  program: Json | null;
 }
 
-function field(source: Record<string, unknown> | null, key: string): unknown {
+function field(source: Json | null, key: string): unknown {
   return source?.[key];
-}
-
-function str(value: unknown): string | null {
-  return typeof value === "string" ? value : null;
-}
-
-function num(value: unknown): number | null {
-  return typeof value === "number" ? value : null;
 }
 
 /** Снимок заявки — контракт ApplicationSnapshot; в ответе конвейера он приходит как JSON. */
 export function snapshotView(application: Application): SnapshotView {
   const snapshot = application.snapshot;
-  const loan = isObject(snapshot.loan) ? snapshot.loan : null;
-  const applicant = isObject(snapshot.applicant) ? snapshot.applicant : null;
+  const loan = obj(snapshot.loan);
+  const applicant = obj(snapshot.applicant);
   return {
     amount: num(field(loan, "amount")),
     termMonths: num(field(loan, "term_months")),
@@ -76,7 +65,7 @@ export function snapshotView(application: Application): SnapshotView {
     branchId: str(snapshot.branch_id),
     employeeId: str(snapshot.employee_id),
     account: str(snapshot.disbursement_account),
-    mandatory: isObject(snapshot.mandatory_checks) ? snapshot.mandatory_checks : null,
-    program: isObject(snapshot.program) ? snapshot.program : null,
+    mandatory: obj(snapshot.mandatory_checks),
+    program: obj(snapshot.program),
   };
 }

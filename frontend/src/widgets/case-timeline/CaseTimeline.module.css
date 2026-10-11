@@ -1,0 +1,46 @@
+.timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.entry {
+  position: relative;
+  padding: 0 0 var(--space-4) var(--space-5);
+  border-left: 2px solid var(--color-gray-5);
+}
+
+.entry:last-child {
+  padding-bottom: 0;
+}
+
+.entry::before {
+  content: "";
+  position: absolute;
+  left: -0.3125rem;
+  top: 0.35rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-gray-2);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+}
+
+.kind {
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+}
+
+.meta,
+.details {
+  color: var(--color-gray);
+  font-size: var(--text-xs);
+}
+
+.details {
+  margin-top: var(--space-1);
+  overflow-wrap: anywhere;
+}

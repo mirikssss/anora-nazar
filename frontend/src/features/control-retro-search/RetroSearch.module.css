@@ -1,0 +1,10 @@
+.retro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hint {
+  color: var(--color-gray);
+  font-size: var(--text-sm);
+}

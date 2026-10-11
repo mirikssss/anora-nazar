@@ -38,17 +38,19 @@ async function enter(choice: RoleChoice): Promise<string> {
   return choice.role.home_path;
 }
 
-export function useChooseRole() {
+/** stayOn — остаться на открытой странице (вход из подсказки доступа), иначе — домашняя страница роли. */
+export function useChooseRole(stayOn?: string) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   return useMutation({
     mutationFn: enter,
     onSuccess: async (homePath) => {
-      // Права другой роли — другие ответы: кеш прежней роли не переиспользуем.
-      queryClient.removeQueries({
+      // Права другой роли — другие ответы: кеш прежней роли сбрасываем. reset, а не remove: открытая
+      // страница остаётся подписана на свои запросы и должна их перезапросить, а не ждать удалённых.
+      await queryClient.resetQueries({
         predicate: (query) => query.queryKey[0] !== sessionKeys.staffRoles[0],
       });
-      await navigate(homePath);
+      await navigate(stayOn ?? homePath);
     },
   });
 }

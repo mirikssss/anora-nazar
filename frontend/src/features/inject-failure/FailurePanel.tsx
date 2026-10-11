@@ -11,6 +11,7 @@ import {
   type FailureFlags,
 } from "@/entities/operation";
 import { errorMessage } from "@/shared/api";
+import { DEMO } from "@/shared/demo";
 import { ru } from "@/shared/i18n/ru";
 import { formatSum, parseInteger } from "@/shared/lib/format";
 import { Badge } from "@/shared/ui/Badge";
@@ -44,6 +45,12 @@ function nodeMessage(response: Record<string, unknown>): string | null {
   return null;
 }
 
+/** Пример новой суммы для повтора: исходная, увеличенная на долю из диапазона демо (см. shared/demo). */
+function otherAmount(original: number, seed: number): number {
+  const [min, max] = DEMO.repeatAmountShare;
+  return Math.round((original * (1 + min + seed * (max - min))) / DEMO.priceStep) * DEMO.priceStep;
+}
+
 function RepeatForm() {
   const operations = useOperations();
   const [operationKey, setOperationKey] = useState("");
@@ -52,6 +59,9 @@ function RepeatForm() {
     mutationFn: ({ key, value }: { key: string; value: number }) => repeatWithOtherAmount(key, value),
   });
   const parsed = parseInteger(amount);
+  const [shareSeed] = useState(() => Math.random());
+  const original = operations.data?.find((op) => op.operation_key === operationKey)?.amount;
+  const suggested = original === undefined ? undefined : otherAmount(original, shareSeed);
   const onSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (operationKey !== "" && parsed !== null) repeat.mutate({ key: operationKey, value: parsed });
@@ -77,6 +87,16 @@ function RepeatForm() {
         value={amount}
         inputMode="numeric"
         hint={parsed !== null ? formatSum(parsed) : undefined}
+        suggestion={
+          suggested === undefined
+            ? undefined
+            : {
+                value: String(suggested),
+                onAccept: () => {
+                  setAmount(String(suggested));
+                },
+              }
+        }
         onChange={(event) => {
           setAmount(event.target.value);
         }}

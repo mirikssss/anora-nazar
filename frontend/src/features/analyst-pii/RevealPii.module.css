@@ -1,0 +1,11 @@
+.reveal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.hint {
+  color: var(--color-gray);
+  font-size: var(--text-xs);
+}

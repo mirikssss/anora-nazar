@@ -10,9 +10,14 @@ import { isCurrent, type RoleOption } from "./roleOptions";
 import styles from "./RoleOptionList.module.css";
 import { useChooseRole } from "./useChooseRole";
 
-export function RoleOptionList({ options }: { options: readonly RoleOption[] }) {
+interface RoleOptionListProps {
+  options: readonly RoleOption[];
+  stayOn?: string;
+}
+
+export function RoleOptionList({ options, stayOn }: RoleOptionListProps) {
   const session = useSession();
-  const choose = useChooseRole();
+  const choose = useChooseRole(stayOn);
   const pendingKey = choose.isPending ? choose.variables : undefined;
   return (
     <div className={styles.wrap}>

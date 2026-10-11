@@ -22,6 +22,7 @@ export interface FormState {
   phone: string;
   deviceId: string;
   address: string;
+  registrationMahalla: string;
   employerInn: string;
   amount: string;
   termMonths: string;
@@ -41,7 +42,8 @@ export interface FormState {
   sessionEvents: readonly SessionEventType[];
 }
 
-export type TextKey = { [K in keyof FormState]: FormState[K] extends string ? K : never }[keyof FormState];
+/** Поля свободного ввода: значение — любая строка (каналы и выборы с фиксированными вариантами — не они). */
+export type TextKey = { [K in keyof FormState]: string extends FormState[K] ? K : never }[keyof FormState];
 
 export const EMPTY_FORM: FormState = {
   channel: "online",
@@ -51,6 +53,7 @@ export const EMPTY_FORM: FormState = {
   phone: "",
   deviceId: "",
   address: "",
+  registrationMahalla: "",
   employerInn: "",
   amount: "",
   termMonths: "",
@@ -78,6 +81,7 @@ export const FIELD_PATHS: Readonly<Record<string, TextKey>> = {
   "applicant.phone": "phone",
   "applicant.device_id": "deviceId",
   "applicant.address": "address",
+  "applicant.registration_mahalla": "registrationMahalla",
   "applicant.employer_inn": "employerInn",
   "loan.amount": "amount",
   "loan.term_months": "termMonths",
@@ -137,6 +141,7 @@ export function toDraft(state: FormState, sessionRefs: string[]): ApplicationDra
       phone: state.phone.trim(),
       device_id: optional(state.deviceId),
       address: optional(state.address),
+      registration_mahalla: optional(state.registrationMahalla),
       employer_inn: optional(state.employerInn),
     },
     loan: {

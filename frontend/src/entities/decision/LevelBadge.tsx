@@ -1,6 +1,7 @@
 // Бейдж уровня: всегда слово и значок, не только цвет (Блок 5, п. 2).
 import { IconAlert, IconError, IconSuccess } from "@/shared/icons";
-import { label, ru } from "@/shared/i18n/ru";
+import { titleOf, useStaffTexts } from "@/entities/texts";
+import { ru } from "@/shared/i18n/ru";
 import { Badge } from "@/shared/ui/Badge";
 
 import type { Level } from "./model";
@@ -14,6 +15,7 @@ interface LevelBadgeProps {
 }
 
 export function LevelBadge({ level, compact = false }: LevelBadgeProps) {
+  const levels = useStaffTexts().data?.levels;
   if (level === null) {
     return (
       <Badge tone="outline" dot={compact}>
@@ -24,7 +26,7 @@ export function LevelBadge({ level, compact = false }: LevelBadgeProps) {
   if (compact) {
     return (
       <Badge tone={level} dot>
-        {label(ru.levels, level)}
+        {titleOf(levels, level)}
       </Badge>
     );
   }
@@ -32,7 +34,7 @@ export function LevelBadge({ level, compact = false }: LevelBadgeProps) {
   return (
     <Badge tone={level}>
       <IconComponent size={14} aria-hidden />
-      {label(ru.levels, level)}
+      {titleOf(levels, level)}
     </Badge>
   );
 }

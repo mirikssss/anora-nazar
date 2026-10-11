@@ -1,5 +1,6 @@
 // Решение узла: типы из OpenAPI и разбор неизменяемой записи решения.
 import type { NodeSchemas } from "@/shared/api";
+import { isObject, list, num, obj, str as text, type Json } from "@/shared/lib/json";
 
 export type Decision = NodeSchemas["schemas"]["DecisionOut"];
 export type Reason = NodeSchemas["schemas"]["Reason"];
@@ -21,16 +22,6 @@ export function splitReasons(reasons: readonly Reason[]): { risk: Reason[]; syst
 }
 
 // Запись решения на бэке — JSONB без схемы в OpenAPI (просьба типизировать отправлена бэку).
-// До этого читаем только нужные поля с проверкой формы; чего нет — не показываем.
-type Json = Record<string, unknown>;
-
-function isObject(value: unknown): value is Json {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function text(value: unknown): string | null {
-  return typeof value === "string" ? value : null;
-}
 
 export interface DecisionResult {
   level: Level | null;
@@ -59,7 +50,7 @@ function isReason(value: unknown): value is Reason {
 }
 
 export function parseResult(value: unknown): DecisionResult {
-  const result = isObject(value) ? value : {};
+  const result = obj(value) ?? {};
   return {
     level: asLevel(text(result.level)),
     action: text(result.action),
@@ -76,12 +67,11 @@ function modelLabel(value: unknown): string | null {
 }
 
 export function parseRecord(record: DecisionRecord["record"]): ParsedRecord {
-  const versions = isObject(record.versions) ? record.versions : {};
-  const inputs = isObject(record.inputs) ? record.inputs : {};
-  const features =
-    isObject(inputs.features) && isObject(inputs.features.values) ? inputs.features.values : null;
-  const models = Array.isArray(versions.models) ? versions.models : [];
-  const shadow = Array.isArray(versions.shadow_models) ? versions.shadow_models : [];
+  const versions = obj(record.versions) ?? {};
+  const inputs = obj(record.inputs) ?? {};
+  const features = obj(obj(inputs.features)?.values);
+  const models = list(versions.models);
+  const shadow = list(versions.shadow_models);
   return {
     result: parseResult(record.result),
     versions: {
@@ -92,5 +82,40 @@ export function parseRecord(record: DecisionRecord["record"]): ParsedRecord {
       shadowModels: shadow.map(modelLabel).filter((item): item is string => item !== null),
     },
     features,
+  };
+}
+
+export interface Contribution {
+  feature: string;
+  value: unknown;
+  contribution: number;
+  reasonCode: string | null;
+}
+
+export interface ModelEvidence {
+  modelVersionId: string | null;
+  probability: number | null;
+  riskCost: number | null;
+  riskCostIsEstimate: boolean;
+  contributions: Contribution[];
+}
+
+/** Доказательство причины MODEL_*: балл, оценочная стоимость риска и вклад признаков (у других причин — null). */
+export function modelEvidence(reason: Reason): ModelEvidence | null {
+  const item = reason.code.startsWith("MODEL_") ? obj(reason.evidence[0]) : null;
+  if (item === null) return null;
+  return {
+    modelVersionId: text(item.model_version_id),
+    probability: num(item.probability),
+    riskCost: num(item.risk_cost_estimate),
+    riskCostIsEstimate: item.risk_cost_is_estimate === true,
+    contributions: list(item.contributions).flatMap((raw) => {
+      const entry = obj(raw);
+      const feature = text(entry?.feature);
+      const contribution = num(entry?.contribution);
+      return entry !== null && feature !== null && contribution !== null
+        ? [{ feature, value: entry.value, contribution, reasonCode: text(entry.reason_code) }]
+        : [];
+    }),
   };
 }

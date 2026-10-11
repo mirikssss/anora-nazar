@@ -19,3 +19,16 @@ RUN npm run build
 FROM nginx:1.29-alpine AS runtime
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
+
+# Стенд (deploy/stand): статика со всеми переменными сборки; конфигурацию nginx даёт шлюз стенда.
+FROM deps AS stand-build
+COPY --chown=node:node . .
+ARG VITE_NODE_API_BASE
+ARG VITE_BANK_API_BASE
+ARG VITE_TIME_ZONE
+# vite.config.ts читает WEB_PORT и при сборке
+ARG WEB_PORT
+RUN npm run build
+
+FROM nginx:1.29-alpine AS stand
+COPY --from=stand-build /app/dist /usr/share/nginx/html

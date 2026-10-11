@@ -866,10 +866,939 @@
           }
         }
       }
+    },
+    "/v1/borrower/personas": {
+      "get": {
+        "tags": [
+          "Приложение заёмщика"
+        ],
+        "summary": "List Personas",
+        "operationId": "list_personas_v1_borrower_personas_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonaOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Personas V1 Borrower Personas Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/borrower/applications": {
+      "post": {
+        "tags": [
+          "Приложение заёмщика"
+        ],
+        "summary": "Create",
+        "description": "Онлайн-заявка персоны; в ответе — экран по решению узла (Т1).",
+        "operationId": "create_v1_borrower_applications_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BorrowerApplicationIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerScreenOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Приложение заёмщика"
+        ],
+        "summary": "List Applications",
+        "operationId": "list_applications_v1_borrower_applications_get",
+        "parameters": [
+          {
+            "name": "persona_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Persona Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BorrowerScreenOut"
+                  },
+                  "title": "Response List Applications V1 Borrower Applications Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/borrower/applications/{application_id}": {
+      "get": {
+        "tags": [
+          "Приложение заёмщика"
+        ],
+        "summary": "Get Application",
+        "operationId": "get_application_v1_borrower_applications__application_id__get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerScreenOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/borrower/applications/{application_id}/intent-answers": {
+      "post": {
+        "tags": [
+          "Приложение заёмщика"
+        ],
+        "summary": "Answer Intent",
+        "operationId": "answer_intent_v1_borrower_applications__application_id__intent_answers_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntentAnswersIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerScreenOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/borrower/applications/{application_id}/pressure": {
+      "post": {
+        "tags": [
+          "Приложение заёмщика"
+        ],
+        "summary": "Report Pressure",
+        "operationId": "report_pressure_v1_borrower_applications__application_id__pressure_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerScreenOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/borrower/applications/{application_id}/cancel": {
+      "post": {
+        "tags": [
+          "Приложение заёмщика"
+        ],
+        "summary": "Cancel",
+        "operationId": "cancel_v1_borrower_applications__application_id__cancel_post",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorrowerScreenOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/program/helpers": {
+      "get": {
+        "tags": [
+          "Платформа программ"
+        ],
+        "summary": "List Helpers",
+        "operationId": "list_helpers_v1_program_helpers_get",
+        "parameters": [
+          {
+            "name": "district",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "District"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HelperOut"
+                  },
+                  "title": "Response List Helpers V1 Program Helpers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/program/suppliers": {
+      "get": {
+        "tags": [
+          "Платформа программ"
+        ],
+        "summary": "List Suppliers",
+        "operationId": "list_suppliers_v1_program_suppliers_get",
+        "parameters": [
+          {
+            "name": "district",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "District"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SupplierOut"
+                  },
+                  "title": "Response List Suppliers V1 Program Suppliers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/program/acts": {
+      "post": {
+        "tags": [
+          "Платформа программ"
+        ],
+        "summary": "Create Act",
+        "description": "Акт уходит в узел сразу: АБС запросит оплату поставщику по нему прямо перед проводкой.",
+        "operationId": "create_act_v1_program_acts_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Платформа программ"
+        ],
+        "summary": "List Acts",
+        "operationId": "list_acts_v1_program_acts_get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ActOut"
+                  },
+                  "title": "Response List Acts V1 Program Acts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transfers": {
+      "post": {
+        "tags": [
+          "Переводы и антифрод банка"
+        ],
+        "summary": "Create",
+        "description": "ТАФ решает сам: по рекомендации узла (Т3) на первом переводе кредитных денег или своим правилом.",
+        "operationId": "create_v1_transfers_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Переводы и антифрод банка"
+        ],
+        "summary": "List Transfers",
+        "operationId": "list_transfers_v1_transfers_get",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransferOut"
+                  },
+                  "title": "Response List Transfers V1 Transfers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transfers/{transfer_id}/decision": {
+      "post": {
+        "tags": [
+          "Переводы и антифрод банка"
+        ],
+        "summary": "Decide",
+        "operationId": "decide_v1_transfers__transfer_id__decision_post",
+        "parameters": [
+          {
+            "name": "transfer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transfer Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferDecisionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/incidents": {
+      "get": {
+        "tags": [
+          "Жалобы и документы органов"
+        ],
+        "summary": "List Incidents",
+        "operationId": "list_incidents_v1_incidents_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IncidentOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Incidents V1 Incidents Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Жалобы и документы органов"
+        ],
+        "summary": "Create",
+        "description": "Тело — контракт факта incident.recorded: вид, типология, итог, заявки, ключ дела.",
+        "operationId": "create_v1_incidents_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentRecorded"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/scenarios": {
+      "get": {
+        "tags": [
+          "Сценарии"
+        ],
+        "summary": "List Scenarios",
+        "operationId": "list_scenarios_v1_scenarios_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScenarioOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Scenarios V1 Scenarios Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/scenarios/{code}/runs": {
+      "post": {
+        "tags": [
+          "Сценарии"
+        ],
+        "summary": "Run",
+        "description": "Выполняет шаги сценария в песочнице; участники каждого запуска новые.",
+        "operationId": "run_v1_scenarios__code__runs_post",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioRunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/scenarios/runs": {
+      "get": {
+        "tags": [
+          "Сценарии"
+        ],
+        "summary": "List Runs",
+        "operationId": "list_runs_v1_scenarios_runs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScenarioRunOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Runs V1 Scenarios Runs Get"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "ActIn": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Application Id"
+          },
+          "signer_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Signer Id"
+          },
+          "signer_role": {
+            "type": "string",
+            "enum": [
+              "helper",
+              "mahalla_banker",
+              "veterinary"
+            ],
+            "title": "Signer Role"
+          },
+          "signed_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Signed On"
+          },
+          "invoice_amount": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Invoice Amount"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "signer_id",
+          "signer_role",
+          "signed_on",
+          "invoice_amount"
+        ],
+        "title": "ActIn"
+      },
+      "ActOut": {
+        "properties": {
+          "act_id": {
+            "type": "string",
+            "title": "Act Id"
+          },
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "signer_id": {
+            "type": "string",
+            "title": "Signer Id"
+          },
+          "signer_role": {
+            "type": "string",
+            "title": "Signer Role"
+          },
+          "signed_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Signed On"
+          },
+          "invoice_amount": {
+            "type": "integer",
+            "title": "Invoice Amount"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "act_id",
+          "application_id",
+          "signer_id",
+          "signer_role",
+          "signed_on",
+          "invoice_amount",
+          "created_at"
+        ],
+        "title": "ActOut"
+      },
+      "AnswerOption": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "AnswerOption"
+      },
       "Applicant": {
         "properties": {
           "pinfl": {
@@ -916,6 +1845,19 @@
               }
             ],
             "title": "Employer Inn"
+          },
+          "registration_mahalla": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Mahalla"
           }
         },
         "additionalProperties": false,
@@ -1205,6 +2147,137 @@
         ],
         "title": "BankRoleOut"
       },
+      "BorrowerApplicationIn": {
+        "properties": {
+          "persona_code": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Persona Code"
+          },
+          "amount": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "description": "Сумма займа, сум"
+          },
+          "term_months": {
+            "type": "integer",
+            "maximum": 600.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Term Months"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "persona_code",
+          "amount",
+          "term_months"
+        ],
+        "title": "BorrowerApplicationIn"
+      },
+      "BorrowerScreenOut": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "persona_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Code"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "screen": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "intent_check",
+              "pause",
+              "under_review",
+              "stopped",
+              "cancelled"
+            ],
+            "title": "Screen"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reason Codes",
+            "description": "Коды причин для текста клиенту — без названий и значений признаков"
+          },
+          "questions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Questions"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Вопросы проверки намерения; null — их сейчас не задают"
+          },
+          "questions_unavailable": {
+            "type": "boolean",
+            "title": "Questions Unavailable",
+            "description": "Проверка намерения нужна, но узел не отдал вопросы"
+          },
+          "intent_answered": {
+            "type": "boolean",
+            "title": "Intent Answered"
+          },
+          "pressure_reported": {
+            "type": "boolean",
+            "title": "Pressure Reported"
+          },
+          "can_cancel": {
+            "type": "boolean",
+            "title": "Can Cancel"
+          },
+          "loan": {
+            "$ref": "#/components/schemas/LoanOut"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "persona_code",
+          "status",
+          "screen",
+          "reason_codes",
+          "questions",
+          "questions_unavailable",
+          "intent_answered",
+          "pressure_reported",
+          "can_cancel",
+          "loan",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "BorrowerScreenOut"
+      },
       "BranchOut": {
         "properties": {
           "id": {
@@ -1258,6 +2331,24 @@
           "role"
         ],
         "title": "EmployeeOut"
+      },
+      "ExpectedOut": {
+        "properties": {
+          "level": {
+            "type": "string",
+            "title": "Level"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          }
+        },
+        "type": "object",
+        "required": [
+          "level",
+          "action"
+        ],
+        "title": "ExpectedOut"
       },
       "Flags": {
         "properties": {
@@ -1337,6 +2428,175 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HelperOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "district": {
+            "type": "string",
+            "title": "District"
+          },
+          "mahalla": {
+            "type": "string",
+            "title": "Mahalla"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "district",
+          "mahalla"
+        ],
+        "title": "HelperOut"
+      },
+      "IncidentOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "typology": {
+            "type": "string",
+            "title": "Typology"
+          },
+          "result": {
+            "type": "string",
+            "title": "Result"
+          },
+          "application_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Application Ids"
+          },
+          "case_key": {
+            "type": "string",
+            "title": "Case Key"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "typology",
+          "result",
+          "application_ids",
+          "case_key",
+          "created_at"
+        ],
+        "title": "IncidentOut"
+      },
+      "IncidentRecorded": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "law_enforcement",
+              "client_report",
+              "internal_control"
+            ],
+            "title": "Kind"
+          },
+          "typology": {
+            "type": "string",
+            "enum": [
+              "F1",
+              "F2",
+              "F3"
+            ],
+            "title": "Typology"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "confirmed_fraud",
+              "confirmed_coercion",
+              "not_confirmed",
+              "false_positive"
+            ],
+            "title": "Result"
+          },
+          "application_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Application Ids"
+          },
+          "case_key": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Case Key"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "typology",
+          "result",
+          "application_ids",
+          "case_key"
+        ],
+        "title": "IncidentRecorded",
+        "description": "Жалоба, документ органа или вывод проверки по выданным заявкам — источник меток с происхождением."
+      },
+      "IntentAnswer": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Question"
+          },
+          "answer": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Answer"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "question",
+          "answer"
+        ],
+        "title": "IntentAnswer"
+      },
+      "IntentAnswersIn": {
+        "properties": {
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/IntentAnswer"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Answers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "answers"
+        ],
+        "title": "IntentAnswersIn"
+      },
       "Loan": {
         "properties": {
           "amount": {
@@ -1370,6 +2630,24 @@
           "term_months"
         ],
         "title": "Loan"
+      },
+      "LoanOut": {
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "term_months": {
+            "type": "integer",
+            "title": "Term Months"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "term_months"
+        ],
+        "title": "LoanOut"
       },
       "NotificationIn": {
         "properties": {
@@ -1475,6 +2753,20 @@
             "minimum": 1.0,
             "title": "Tranche",
             "default": 1
+          },
+          "acceptance_act_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acceptance Act Id",
+            "description": "Акт приёмки этой заявки — обязателен для оплаты поставщику"
           }
         },
         "type": "object",
@@ -1517,6 +2809,17 @@
           "status": {
             "type": "string",
             "title": "Status"
+          },
+          "acceptance_act_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acceptance Act Id"
           },
           "permit": {
             "anyOf": [
@@ -1567,6 +2870,7 @@
           "amount",
           "account",
           "status",
+          "acceptance_act_id",
           "permit",
           "refusal",
           "outcome_reported",
@@ -1592,6 +2896,73 @@
           "status"
         ],
         "title": "OperationStatusOut"
+      },
+      "PersonaOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "age": {
+            "type": "integer",
+            "title": "Age"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "pinfl": {
+            "type": "string",
+            "title": "Pinfl"
+          },
+          "phone": {
+            "type": "string",
+            "title": "Phone"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "registration_mahalla": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Mahalla"
+          },
+          "card_balance": {
+            "type": "integer",
+            "title": "Card Balance"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "display_name",
+          "age",
+          "summary",
+          "pinfl",
+          "phone",
+          "address",
+          "registration_mahalla",
+          "card_balance"
+        ],
+        "title": "PersonaOut"
       },
       "ProgramDetails": {
         "properties": {
@@ -1638,6 +3009,19 @@
             "maxLength": 128,
             "minLength": 1,
             "title": "District"
+          },
+          "helper_mahalla": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Helper Mahalla"
           }
         },
         "additionalProperties": false,
@@ -1653,6 +3037,49 @@
           "district"
         ],
         "title": "ProgramDetails"
+      },
+      "Question": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerOption"
+            },
+            "type": "array",
+            "title": "Answers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "answers"
+        ],
+        "title": "Question",
+        "description": "Вопрос проверки намерения: только коды, тексты по кодам — из узла (каталог текстов для клиента)."
+      },
+      "Questions": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/Question"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "questions"
+        ],
+        "title": "Questions"
       },
       "RegistryOut": {
         "properties": {
@@ -1726,6 +3153,117 @@
         ],
         "title": "RepeatOut"
       },
+      "RunApplicationOut": {
+        "properties": {
+          "person": {
+            "type": "string",
+            "title": "Person",
+            "description": "Участник сценария"
+          },
+          "application_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Id"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "node_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node State"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "last_decision": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Decision"
+          },
+          "in_borrower_app": {
+            "type": "boolean",
+            "title": "In Borrower App",
+            "description": "Заявка видна в приложении заёмщика"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "person",
+          "application_id",
+          "channel",
+          "status",
+          "node_state",
+          "level",
+          "action",
+          "last_decision",
+          "in_borrower_app",
+          "error"
+        ],
+        "title": "RunApplicationOut"
+      },
       "SandboxOut": {
         "properties": {
           "realm_id": {
@@ -1739,6 +3277,109 @@
           "realm_id"
         ],
         "title": "SandboxOut"
+      },
+      "ScenarioOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "zone": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone",
+            "description": "Слепая зона 1–3; null — контрольный сценарий"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "expected": {
+            "$ref": "#/components/schemas/ExpectedOut",
+            "description": "Смысл сценария; уровень считает узел по своей политике и моделям"
+          },
+          "expected_summary": {
+            "type": "string",
+            "title": "Expected Summary"
+          },
+          "applications": {
+            "type": "integer",
+            "title": "Applications",
+            "description": "Сколько заявок создаёт запуск"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "zone",
+          "title",
+          "summary",
+          "expected",
+          "expected_summary",
+          "applications"
+        ],
+        "title": "ScenarioOut"
+      },
+      "ScenarioRunOut": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Run Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "scenario_code": {
+            "type": "string",
+            "title": "Scenario Code"
+          },
+          "applications": {
+            "items": {
+              "$ref": "#/components/schemas/RunApplicationOut"
+            },
+            "type": "array",
+            "title": "Applications"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "number",
+          "scenario_code",
+          "applications",
+          "created_at",
+          "finished_at"
+        ],
+        "title": "ScenarioRunOut"
       },
       "SelfBanIn": {
         "properties": {
@@ -1854,6 +3495,219 @@
           "snapshot"
         ],
         "title": "SnapshotOut"
+      },
+      "SupplierOut": {
+        "properties": {
+          "inn": {
+            "type": "string",
+            "title": "Inn"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "district": {
+            "type": "string",
+            "title": "District"
+          },
+          "registered_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Registered On"
+          },
+          "account": {
+            "type": "string",
+            "title": "Account"
+          }
+        },
+        "type": "object",
+        "required": [
+          "inn",
+          "name",
+          "category",
+          "district",
+          "registered_on",
+          "account"
+        ],
+        "title": "SupplierOut"
+      },
+      "TransferDecisionIn": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "release",
+              "cancel"
+            ],
+            "title": "Action"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "TransferDecisionIn",
+        "description": "Решение ТАФ банка по удержанному переводу после подтверждения с клиентом."
+      },
+      "TransferIn": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Application Id",
+            "description": "Заявка, по которой зачислен кредит"
+          },
+          "recipient_card": {
+            "type": "string",
+            "pattern": "^\\d{16}$",
+            "title": "Recipient Card",
+            "description": "Карта получателя — 16 цифр"
+          },
+          "amount": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "description": "Сумма перевода, сум"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "recipient_card",
+          "amount"
+        ],
+        "title": "TransferIn"
+      },
+      "TransferOut": {
+        "properties": {
+          "transfer_id": {
+            "type": "string",
+            "title": "Transfer Id"
+          },
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "recipient_card": {
+            "type": "string",
+            "title": "Recipient Card"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "recipient_is_new": {
+            "type": "boolean",
+            "title": "Recipient Is New"
+          },
+          "balance_before_credit": {
+            "type": "integer",
+            "title": "Balance Before Credit"
+          },
+          "credit_share": {
+            "type": "number",
+            "title": "Credit Share"
+          },
+          "credited_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Credited At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "executed — исполнен, held — удержан до подтверждения, cancelled — отменён"
+          },
+          "decided_by": {
+            "type": "string",
+            "title": "Decided By",
+            "description": "node — по рекомендации узла (Т3), own_rule — своим правилом ТАФ"
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation"
+          },
+          "node_error": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Error"
+          },
+          "own_rule": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Own Rule"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transfer_id",
+          "application_id",
+          "recipient_card",
+          "amount",
+          "recipient_is_new",
+          "balance_before_credit",
+          "credit_share",
+          "credited_at",
+          "status",
+          "decided_by",
+          "recommendation",
+          "node_error",
+          "own_rule",
+          "resolution",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TransferOut"
       },
       "ValidationError": {
         "properties": {

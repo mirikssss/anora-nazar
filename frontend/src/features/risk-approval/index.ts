@@ -1,0 +1,1 @@
+export { SecondSignerApproval } from "./SecondSignerApproval";

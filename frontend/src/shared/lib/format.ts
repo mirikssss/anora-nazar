@@ -39,6 +39,14 @@ export function formatShare(value: number): string {
   return percent.format(value);
 }
 
+/** Дробное число с заданным числом знаков: PR-AUC, мера Брайера. */
+export function formatDecimal(value: number, digits: number): string {
+  return new Intl.NumberFormat(LOCALE, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
+}
+
 /** ДД.ММ.ГГГГ */
 export function formatDate(iso: string): string {
   return date.format(new Date(iso));

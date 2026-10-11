@@ -1,0 +1,11 @@
+.wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
+.note {
+  color: var(--color-gray);
+  font-size: var(--text-sm);
+}

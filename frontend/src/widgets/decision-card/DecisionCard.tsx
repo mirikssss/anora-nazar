@@ -3,6 +3,9 @@
 import type { ReactNode } from "react";
 
 import { LevelBadge, ReasonItem, splitReasons, type DecisionResult } from "@/entities/decision";
+import { hasPermission, useSession } from "@/entities/session";
+import { titleOf, useStaffTexts } from "@/entities/texts";
+import { PERMISSIONS } from "@/shared/config/permissions";
 import { label, ru } from "@/shared/i18n/ru";
 import { formatDateTime } from "@/shared/lib/format";
 import { SummaryList, type SummaryRow } from "@/shared/ui/SummaryList";
@@ -18,12 +21,14 @@ interface DecisionCardProps {
 }
 
 export function DecisionCard({ result, point, holds = [], marked = [], actions }: DecisionCardProps) {
+  const showScores = hasPermission(useSession(), PERMISSIONS.viewQuality);
+  const texts = useStaffTexts().data;
   const { risk, system } = splitReasons(result.reasons);
   const summary: SummaryRow[] = [
     {
       key: "action",
       label: ru.decision.action,
-      value: result.action ? label(ru.decisionActions, result.action) : ru.common.none,
+      value: result.action ? titleOf(texts?.actions, result.action) : ru.common.none,
     },
     { key: "point", label: ru.decision.point, value: point ? label(ru.points, point) : ru.common.none },
     {
@@ -56,7 +61,7 @@ export function DecisionCard({ result, point, holds = [], marked = [], actions }
         {risk.length > 0 ? (
           <ul>
             {risk.map((reason, index) => (
-              <ReasonItem key={`${reason.code}-${String(index)}`} reason={reason} />
+              <ReasonItem key={`${reason.code}-${String(index)}`} reason={reason} showScores={showScores} />
             ))}
           </ul>
         ) : (
@@ -89,7 +94,7 @@ export function DecisionCard({ result, point, holds = [], marked = [], actions }
           <h3 className={[styles.heading, styles.muted].join(" ")}>{ru.decision.systemReasons}</h3>
           <ul>
             {system.map((reason, index) => (
-              <ReasonItem key={`${reason.code}-${String(index)}`} reason={reason} />
+              <ReasonItem key={`${reason.code}-${String(index)}`} reason={reason} showScores={showScores} />
             ))}
           </ul>
         </section>

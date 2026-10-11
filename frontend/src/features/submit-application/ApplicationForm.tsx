@@ -15,6 +15,7 @@ import { InlineError } from "@/shared/ui/InlineError";
 import styles from "./ApplicationForm.module.css";
 import {
   EMPTY_FORM,
+  FIELD_PATHS,
   serverErrors,
   SESSION_EVENTS,
   validate,
@@ -24,6 +25,7 @@ import {
   type TextKey,
   unmappedMessages,
 } from "./form";
+import { exampleValue, makeExample } from "./example";
 import { useSubmitApplication } from "./useSubmitApplication";
 
 const t = ru.conveyor;
@@ -36,15 +38,47 @@ function sumHint(value: string): string | undefined {
 export function ApplicationForm({ onSubmitted }: { onSubmitted: (application: Application) => void }) {
   const [state, setState] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [example, setExample] = useState(makeExample);
   const branches = useBranches();
   const submit = useSubmitApplication((application) => {
     setErrors({});
+    setExample(makeExample());
     onSubmitted(application);
   });
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setState((current) => ({ ...current, [key]: value }));
   };
+  const apiFields = submit.error instanceof ApiError ? serverErrors(submit.error.fields) : {};
+  const shownErrors: FormErrors = { ...apiFields, ...errors };
+  const unmapped = submit.error instanceof ApiError ? unmappedMessages(submit.error.fields) : [];
+
+  const branchList = branches.data ?? [];
+  const branch = branchList.find((item) => item.id === state.branchId);
+  const suggestion = (key: TextKey) => {
+    const value = exampleValue(example, key, state.channel, branchList, branch);
+    return value === ""
+      ? undefined
+      : {
+          value,
+          onAccept: () => {
+            set(key, value);
+          },
+        };
+  };
+  /** Каждое нажатие — новый заявитель целиком; канал и итоги проверок остаются выбором проверяющего. */
+  const fillExample = () => {
+    const branchId = exampleValue(example, "branchId", state.channel, branchList, undefined);
+    const chosen = branchList.find((item) => item.id === branchId);
+    const next: FormState = { ...state, branchId };
+    for (const key of Object.values(FIELD_PATHS)) {
+      if (key !== "branchId") next[key] = exampleValue(example, key, state.channel, branchList, chosen);
+    }
+    setState(next);
+    setErrors({});
+    setExample(makeExample());
+  };
+
   const text = (
     key: TextKey,
     fieldLabel: string,
@@ -55,28 +89,32 @@ export function ApplicationForm({ onSubmitted }: { onSubmitted: (application: Ap
       label={fieldLabel}
       value={state[key]}
       placeholder={placeholder}
+      suggestion={suggestion(key)}
       inputMode={extra?.numeric === true ? "numeric" : undefined}
       hint={extra?.hint}
-      error={errors[key]}
+      error={shownErrors[key]}
       onChange={(event) => {
         set(key, event.target.value);
       }}
     />
   );
 
-  const branch = branches.data?.find((item) => item.id === state.branchId);
   const onSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const found = validate(state);
     setErrors(found);
     if (Object.keys(found).length === 0) submit.mutate(state);
   };
-  const apiFields = submit.error instanceof ApiError ? serverErrors(submit.error.fields) : {};
-  const shownErrors = { ...apiFields, ...errors };
-  const unmapped = submit.error instanceof ApiError ? unmappedMessages(submit.error.fields) : [];
-
   return (
-    <Card title={t.formTitle} subtitle={t.formSubtitle}>
+    <Card
+      title={t.formTitle}
+      subtitle={t.formSubtitle}
+      actions={
+        <Button size="sm" variant="ghost" onClick={fillExample}>
+          {ru.field.fillExample}
+        </Button>
+      }
+    >
       <form className={styles.form} noValidate onSubmit={onSubmit}>
         <fieldset className={styles.section}>
           <legend className={styles.legend}>{t.sections.channel}</legend>
@@ -130,6 +168,7 @@ export function ApplicationForm({ onSubmitted }: { onSubmitted: (application: Ap
             {text("employerInn", t.labels.employerInn, t.placeholders.employerInn, { numeric: true })}
           </div>
           {text("address", t.labels.address, t.placeholders.address)}
+          {text("registrationMahalla", t.labels.registrationMahalla, t.placeholders.registrationMahalla)}
         </fieldset>
 
         <fieldset className={styles.section}>

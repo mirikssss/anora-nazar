@@ -1,0 +1,70 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: var(--divider);
+}
+
+.heading {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--divider);
+}
+
+.act {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: var(--divider);
+}
+
+.actText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.actHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-weight: var(--weight-medium);
+}
+
+.hint {
+  color: var(--color-gray);
+  font-size: var(--text-sm);
+}
+
+@media (--tablet) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

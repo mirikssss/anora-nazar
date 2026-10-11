@@ -1,0 +1,83 @@
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-5);
+}
+
+.queue,
+.main,
+.side,
+.placeholder {
+  min-width: 0;
+}
+
+.main,
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.back {
+  display: none;
+  align-items: center;
+  min-height: var(--control-height-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+/* Телефон: на /analyst — только очередь; в деле очередь уходит, вместо неё — возврат. */
+@media (--phone-only) {
+  .withCase .queue,
+  .workspace:not(.withCase) .placeholder {
+    display: none;
+  }
+
+  .withCase .back {
+    display: inline-flex;
+  }
+}
+
+@media (--tablet) {
+  .workspace {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-areas:
+      "queue main"
+      "queue side";
+  }
+
+  .queue {
+    grid-area: queue;
+  }
+
+  .main {
+    grid-area: main;
+  }
+
+  .side {
+    grid-area: side;
+  }
+
+  .placeholder {
+    grid-column: 2 / -1;
+    grid-row: 1;
+  }
+}
+
+/* Десктоп: шапка в одну строку, поэтому колонки можно закрепить под ней. */
+@media (--desktop) {
+  .workspace {
+    grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 4fr);
+    grid-template-areas: "queue main side";
+  }
+
+  .queue,
+  .side {
+    position: sticky;
+    top: calc(var(--header-height) + var(--space-4));
+    max-height: calc(100dvh - var(--header-height) - var(--space-6));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}

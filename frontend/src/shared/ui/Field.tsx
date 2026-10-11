@@ -2,6 +2,7 @@
 import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 
 import { IconChevronDown } from "@/shared/icons";
+import { ru } from "@/shared/i18n/ru";
 
 import styles from "./Field.module.css";
 
@@ -37,23 +38,59 @@ function FieldFrame({ label, hint, error, children }: FieldFrameProps) {
   );
 }
 
+/** Пример значения для демо: виден вместо плейсхолдера, Tab или нажатие на метку подставляет его. */
+export interface Suggestion {
+  value: string;
+  onAccept: () => void;
+}
+
 interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "id"> {
   label: ReactNode;
   hint?: ReactNode | undefined;
   error?: string | undefined;
+  suggestion?: Suggestion | undefined;
 }
 
-export function TextField({ label, hint, error, className, ...rest }: TextFieldProps) {
+export function TextField({
+  label,
+  hint,
+  error,
+  className,
+  suggestion,
+  placeholder,
+  onKeyDown,
+  ...rest
+}: TextFieldProps) {
+  const offer = suggestion !== undefined && rest.value === "" ? suggestion : undefined;
   return (
     <FieldFrame label={label} hint={hint} error={error}>
       {({ id, describedBy, invalid }) => (
-        <input
-          {...rest}
-          id={id}
-          aria-describedby={describedBy}
-          aria-invalid={invalid || undefined}
-          className={[styles.control, className ?? ""].join(" ")}
-        />
+        <div className={styles.inputWrap}>
+          <input
+            {...rest}
+            id={id}
+            placeholder={offer?.value ?? placeholder}
+            aria-describedby={describedBy}
+            aria-invalid={invalid || undefined}
+            className={[styles.control, offer ? styles.withSuggestion : "", className ?? ""].join(" ")}
+            onKeyDown={(event) => {
+              if (offer && event.key === "Tab" && !event.shiftKey) offer.onAccept();
+              onKeyDown?.(event);
+            }}
+          />
+          {offer ? (
+            <button
+              type="button"
+              tabIndex={-1}
+              className={styles.suggestionKey}
+              aria-label={`${ru.field.acceptSuggestion}: ${offer.value}`}
+              title={ru.field.acceptSuggestion}
+              onClick={offer.onAccept}
+            >
+              {ru.field.suggestionKey}
+            </button>
+          ) : null}
+        </div>
       )}
     </FieldFrame>
   );

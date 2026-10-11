@@ -1,0 +1,17 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.columns {
+  display: grid;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (--desktop) {
+  .columns {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+}

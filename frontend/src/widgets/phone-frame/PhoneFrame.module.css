@@ -1,0 +1,31 @@
+.frame {
+  min-width: 0;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+@media (--tablet) {
+  .frame {
+    width: var(--phone-width);
+    max-width: 100%;
+    padding: var(--space-3);
+    border: var(--border);
+    border-radius: calc(var(--radius) * 2);
+    background: var(--color-bg);
+  }
+
+  .screen {
+    height: var(--phone-height);
+    max-height: calc(100dvh - var(--header-height) - var(--space-8));
+    min-height: 32rem;
+    overflow-y: auto;
+    padding: var(--space-5) var(--space-4);
+    border: var(--divider);
+    border-radius: calc(var(--radius) * 1.5);
+    overscroll-behavior: contain;
+  }
+}

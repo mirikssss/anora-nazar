@@ -1,0 +1,24 @@
+.version {
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.stacked {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.muted {
+  color: var(--color-gray);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.code {
+  color: var(--color-gray);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}

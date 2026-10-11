@@ -1,0 +1,46 @@
+.outcome {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.heading {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+
+.hint {
+  display: block;
+  color: var(--color-gray);
+  font-size: var(--text-xs);
+}
+
+.check,
+.radio {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+  font-size: var(--text-sm);
+}
+
+.check input,
+.radio input {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.1rem;
+  accent-color: var(--color-text);
+}
+
+.radios {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

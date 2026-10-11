@@ -357,10 +357,331 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/borrower/personas": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Personas */
+    get: operations["list_personas_v1_borrower_personas_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/borrower/applications": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Applications */
+    get: operations["list_applications_v1_borrower_applications_get"];
+    put?: never;
+    /**
+     * Create
+     * @description Онлайн-заявка персоны; в ответе — экран по решению узла (Т1).
+     */
+    post: operations["create_v1_borrower_applications_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/borrower/applications/{application_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Application */
+    get: operations["get_application_v1_borrower_applications__application_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/borrower/applications/{application_id}/intent-answers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Answer Intent */
+    post: operations["answer_intent_v1_borrower_applications__application_id__intent_answers_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/borrower/applications/{application_id}/pressure": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Report Pressure */
+    post: operations["report_pressure_v1_borrower_applications__application_id__pressure_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/borrower/applications/{application_id}/cancel": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Cancel */
+    post: operations["cancel_v1_borrower_applications__application_id__cancel_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/program/helpers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Helpers */
+    get: operations["list_helpers_v1_program_helpers_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/program/suppliers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Suppliers */
+    get: operations["list_suppliers_v1_program_suppliers_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/program/acts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Acts */
+    get: operations["list_acts_v1_program_acts_get"];
+    put?: never;
+    /**
+     * Create Act
+     * @description Акт уходит в узел сразу: АБС запросит оплату поставщику по нему прямо перед проводкой.
+     */
+    post: operations["create_act_v1_program_acts_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/transfers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Transfers */
+    get: operations["list_transfers_v1_transfers_get"];
+    put?: never;
+    /**
+     * Create
+     * @description ТАФ решает сам: по рекомендации узла (Т3) на первом переводе кредитных денег или своим правилом.
+     */
+    post: operations["create_v1_transfers_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/transfers/{transfer_id}/decision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Decide */
+    post: operations["decide_v1_transfers__transfer_id__decision_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/incidents": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Incidents */
+    get: operations["list_incidents_v1_incidents_get"];
+    put?: never;
+    /**
+     * Create
+     * @description Тело — контракт факта incident.recorded: вид, типология, итог, заявки, ключ дела.
+     */
+    post: operations["create_v1_incidents_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/scenarios": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Scenarios */
+    get: operations["list_scenarios_v1_scenarios_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/scenarios/{code}/runs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Run
+     * @description Выполняет шаги сценария в песочнице; участники каждого запуска новые.
+     */
+    post: operations["run_v1_scenarios__code__runs_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/scenarios/runs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Runs */
+    get: operations["list_runs_v1_scenarios_runs_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** ActIn */
+    ActIn: {
+      /** Application Id */
+      application_id: string;
+      /** Signer Id */
+      signer_id: string;
+      /**
+       * Signer Role
+       * @enum {string}
+       */
+      signer_role: "helper" | "mahalla_banker" | "veterinary";
+      /**
+       * Signed On
+       * Format: date
+       */
+      signed_on: string;
+      /** Invoice Amount */
+      invoice_amount: number;
+    };
+    /** ActOut */
+    ActOut: {
+      /** Act Id */
+      act_id: string;
+      /** Application Id */
+      application_id: string;
+      /** Signer Id */
+      signer_id: string;
+      /** Signer Role */
+      signer_role: string;
+      /**
+       * Signed On
+       * Format: date
+       */
+      signed_on: string;
+      /** Invoice Amount */
+      invoice_amount: number;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
+    /** AnswerOption */
+    AnswerOption: {
+      /** Code */
+      code: string;
+    };
     /** Applicant */
     Applicant: {
       /** Pinfl */
@@ -373,6 +694,8 @@ export interface components {
       address?: string | null;
       /** Employer Inn */
       employer_inn?: string | null;
+      /** Registration Mahalla */
+      registration_mahalla?: string | null;
     };
     /**
      * ApplicationChange
@@ -458,6 +781,61 @@ export interface components {
       /** Restrictions */
       restrictions: string[];
     };
+    /** BorrowerApplicationIn */
+    BorrowerApplicationIn: {
+      /** Persona Code */
+      persona_code: string;
+      /**
+       * Amount
+       * @description Сумма займа, сум
+       */
+      amount: number;
+      /** Term Months */
+      term_months: number;
+    };
+    /** BorrowerScreenOut */
+    BorrowerScreenOut: {
+      /** Application Id */
+      application_id: string;
+      /** Persona Code */
+      persona_code: string | null;
+      /** Status */
+      status: string;
+      /**
+       * Screen
+       * @enum {string}
+       */
+      screen: "approved" | "intent_check" | "pause" | "under_review" | "stopped" | "cancelled";
+      /**
+       * Reason Codes
+       * @description Коды причин для текста клиенту — без названий и значений признаков
+       */
+      reason_codes: string[];
+      /** @description Вопросы проверки намерения; null — их сейчас не задают */
+      questions: components["schemas"]["Questions"] | null;
+      /**
+       * Questions Unavailable
+       * @description Проверка намерения нужна, но узел не отдал вопросы
+       */
+      questions_unavailable: boolean;
+      /** Intent Answered */
+      intent_answered: boolean;
+      /** Pressure Reported */
+      pressure_reported: boolean;
+      /** Can Cancel */
+      can_cancel: boolean;
+      loan: components["schemas"]["LoanOut"];
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+    };
     /** BranchOut */
     BranchOut: {
       /** Id */
@@ -477,6 +855,13 @@ export interface components {
       display_name: string;
       /** Role */
       role: string;
+    };
+    /** ExpectedOut */
+    ExpectedOut: {
+      /** Level */
+      level: string;
+      /** Action */
+      action: string;
     };
     /** Flags */
     Flags: {
@@ -510,6 +895,72 @@ export interface components {
       /** Detail */
       detail?: components["schemas"]["ValidationError"][];
     };
+    /** HelperOut */
+    HelperOut: {
+      /** Id */
+      id: string;
+      /** District */
+      district: string;
+      /** Mahalla */
+      mahalla: string;
+    };
+    /** IncidentOut */
+    IncidentOut: {
+      /** Id */
+      id: string;
+      /** Kind */
+      kind: string;
+      /** Typology */
+      typology: string;
+      /** Result */
+      result: string;
+      /** Application Ids */
+      application_ids: string[];
+      /** Case Key */
+      case_key: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
+    /**
+     * IncidentRecorded
+     * @description Жалоба, документ органа или вывод проверки по выданным заявкам — источник меток с происхождением.
+     */
+    IncidentRecorded: {
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "law_enforcement" | "client_report" | "internal_control";
+      /**
+       * Typology
+       * @enum {string}
+       */
+      typology: "F1" | "F2" | "F3";
+      /**
+       * Result
+       * @enum {string}
+       */
+      result: "confirmed_fraud" | "confirmed_coercion" | "not_confirmed" | "false_positive";
+      /** Application Ids */
+      application_ids: string[];
+      /** Case Key */
+      case_key: string;
+    };
+    /** IntentAnswer */
+    IntentAnswer: {
+      /** Question */
+      question: string;
+      /** Answer */
+      answer: string;
+    };
+    /** IntentAnswersIn */
+    IntentAnswersIn: {
+      /** Answers */
+      answers: components["schemas"]["IntentAnswer"][];
+    };
     /** Loan */
     Loan: {
       /** Amount */
@@ -518,6 +969,13 @@ export interface components {
       term_months: number;
       /** Purpose */
       purpose?: string | null;
+    };
+    /** LoanOut */
+    LoanOut: {
+      /** Amount */
+      amount: number;
+      /** Term Months */
+      term_months: number;
     };
     /** NotificationIn */
     NotificationIn: {
@@ -575,6 +1033,11 @@ export interface components {
        * @default 1
        */
       tranche: number;
+      /**
+       * Acceptance Act Id
+       * @description Акт приёмки этой заявки — обязателен для оплаты поставщику
+       */
+      acceptance_act_id?: string | null;
     };
     /** OperationOut */
     OperationOut: {
@@ -594,6 +1057,8 @@ export interface components {
       account: string;
       /** Status */
       status: string;
+      /** Acceptance Act Id */
+      acceptance_act_id: string | null;
       /** Permit */
       permit: {
         [key: string]: unknown;
@@ -623,6 +1088,27 @@ export interface components {
        */
       status: "executed" | "not_executed" | "in_progress";
     };
+    /** PersonaOut */
+    PersonaOut: {
+      /** Code */
+      code: string;
+      /** Display Name */
+      display_name: string;
+      /** Age */
+      age: number;
+      /** Summary */
+      summary: string;
+      /** Pinfl */
+      pinfl: string;
+      /** Phone */
+      phone: string;
+      /** Address */
+      address: string | null;
+      /** Registration Mahalla */
+      registration_mahalla: string | null;
+      /** Card Balance */
+      card_balance: number;
+    };
     /** ProgramDetails */
     ProgramDetails: {
       /** Helper Id */
@@ -641,6 +1127,25 @@ export interface components {
       quantity: number;
       /** District */
       district: string;
+      /** Helper Mahalla */
+      helper_mahalla?: string | null;
+    };
+    /**
+     * Question
+     * @description Вопрос проверки намерения: только коды, тексты по кодам — из узла (каталог текстов для клиента).
+     */
+    Question: {
+      /** Code */
+      code: string;
+      /** Answers */
+      answers: components["schemas"]["AnswerOption"][];
+    };
+    /** Questions */
+    Questions: {
+      /** Version */
+      version: string;
+      /** Questions */
+      questions: components["schemas"]["Question"][];
     };
     /** RegistryOut */
     RegistryOut: {
@@ -676,6 +1181,39 @@ export interface components {
         [key: string]: unknown;
       };
     };
+    /** RunApplicationOut */
+    RunApplicationOut: {
+      /**
+       * Person
+       * @description Участник сценария
+       */
+      person: string;
+      /** Application Id */
+      application_id: string | null;
+      /** Channel */
+      channel: string;
+      /** Status */
+      status: string | null;
+      /** Node State */
+      node_state: string | null;
+      /** Level */
+      level: string | null;
+      /** Action */
+      action: string | null;
+      /** Last Decision */
+      last_decision: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * In Borrower App
+       * @description Заявка видна в приложении заёмщика
+       */
+      in_borrower_app: boolean;
+      /** Error */
+      error: {
+        [key: string]: unknown;
+      } | null;
+    };
     /** SandboxOut */
     SandboxOut: {
       /**
@@ -683,6 +1221,50 @@ export interface components {
        * Format: uuid
        */
       realm_id: string;
+    };
+    /** ScenarioOut */
+    ScenarioOut: {
+      /** Code */
+      code: string;
+      /**
+       * Zone
+       * @description Слепая зона 1–3; null — контрольный сценарий
+       */
+      zone: number | null;
+      /** Title */
+      title: string;
+      /** Summary */
+      summary: string;
+      /** @description Смысл сценария; уровень считает узел по своей политике и моделям */
+      expected: components["schemas"]["ExpectedOut"];
+      /** Expected Summary */
+      expected_summary: string;
+      /**
+       * Applications
+       * @description Сколько заявок создаёт запуск
+       */
+      applications: number;
+    };
+    /** ScenarioRunOut */
+    ScenarioRunOut: {
+      /**
+       * Run Id
+       * Format: uuid
+       */
+      run_id: string;
+      /** Number */
+      number: number;
+      /** Scenario Code */
+      scenario_code: string;
+      /** Applications */
+      applications: components["schemas"]["RunApplicationOut"][];
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Finished At */
+      finished_at: string | null;
     };
     /** SelfBanIn */
     SelfBanIn: {
@@ -732,6 +1314,109 @@ export interface components {
       snapshot: {
         [key: string]: unknown;
       };
+    };
+    /** SupplierOut */
+    SupplierOut: {
+      /** Inn */
+      inn: string;
+      /** Name */
+      name: string;
+      /** Category */
+      category: string;
+      /** District */
+      district: string;
+      /**
+       * Registered On
+       * Format: date
+       */
+      registered_on: string;
+      /** Account */
+      account: string;
+    };
+    /**
+     * TransferDecisionIn
+     * @description Решение ТАФ банка по удержанному переводу после подтверждения с клиентом.
+     */
+    TransferDecisionIn: {
+      /**
+       * Action
+       * @enum {string}
+       */
+      action: "release" | "cancel";
+    };
+    /** TransferIn */
+    TransferIn: {
+      /**
+       * Application Id
+       * @description Заявка, по которой зачислен кредит
+       */
+      application_id: string;
+      /**
+       * Recipient Card
+       * @description Карта получателя — 16 цифр
+       */
+      recipient_card: string;
+      /**
+       * Amount
+       * @description Сумма перевода, сум
+       */
+      amount: number;
+    };
+    /** TransferOut */
+    TransferOut: {
+      /** Transfer Id */
+      transfer_id: string;
+      /** Application Id */
+      application_id: string;
+      /** Recipient Card */
+      recipient_card: string;
+      /** Amount */
+      amount: number;
+      /** Recipient Is New */
+      recipient_is_new: boolean;
+      /** Balance Before Credit */
+      balance_before_credit: number;
+      /** Credit Share */
+      credit_share: number;
+      /**
+       * Credited At
+       * Format: date-time
+       */
+      credited_at: string;
+      /**
+       * Status
+       * @description executed — исполнен, held — удержан до подтверждения, cancelled — отменён
+       */
+      status: string;
+      /**
+       * Decided By
+       * @description node — по рекомендации узла (Т3), own_rule — своим правилом ТАФ
+       */
+      decided_by: string;
+      /** Recommendation */
+      recommendation: {
+        [key: string]: unknown;
+      } | null;
+      /** Node Error */
+      node_error: {
+        [key: string]: unknown;
+      } | null;
+      /** Own Rule */
+      own_rule: {
+        [key: string]: unknown;
+      } | null;
+      /** Resolution */
+      resolution: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
     };
     /** ValidationError */
     ValidationError: {
@@ -1427,6 +2112,568 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_personas_v1_borrower_personas_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PersonaOut"][];
+        };
+      };
+    };
+  };
+  list_applications_v1_borrower_applications_get: {
+    parameters: {
+      query?: {
+        persona_code?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerScreenOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_v1_borrower_applications_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BorrowerApplicationIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerScreenOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_application_v1_borrower_applications__application_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        application_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerScreenOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  answer_intent_v1_borrower_applications__application_id__intent_answers_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        application_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IntentAnswersIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerScreenOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  report_pressure_v1_borrower_applications__application_id__pressure_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        application_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerScreenOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  cancel_v1_borrower_applications__application_id__cancel_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        application_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BorrowerScreenOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_helpers_v1_program_helpers_get: {
+    parameters: {
+      query?: {
+        district?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HelperOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_suppliers_v1_program_suppliers_get: {
+    parameters: {
+      query?: {
+        district?: string | null;
+        category?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_acts_v1_program_acts_get: {
+    parameters: {
+      query?: {
+        application_id?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_act_v1_program_acts_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_transfers_v1_transfers_get: {
+    parameters: {
+      query?: {
+        application_id?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TransferOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_v1_transfers_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TransferIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TransferOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  decide_v1_transfers__transfer_id__decision_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        transfer_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TransferDecisionIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TransferOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_incidents_v1_incidents_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IncidentOut"][];
+        };
+      };
+    };
+  };
+  create_v1_incidents_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IncidentRecorded"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IncidentOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_scenarios_v1_scenarios_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScenarioOut"][];
+        };
+      };
+    };
+  };
+  run_v1_scenarios__code__runs_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScenarioRunOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_runs_v1_scenarios_runs_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScenarioRunOut"][];
         };
       };
     };
