@@ -48,6 +48,8 @@ ZONE3 = (
     _feature(
         "employer_headcount_growth", BOTH, "registry", "год", "source_unavailable", "F3_NEW_EMPLOYER_HIRING_SURGE"
     ),
+    _feature("employer_cohort_size", BOTH, "index", "30 дней", "not_applicable", "F3_NEW_EMPLOYER_HIRING_SURGE"),
+    _feature("employer_cohort_income_alarm_share", BOTH, "inps", "30 дней", "unknown", "F3_NEW_EMPLOYER_HIRING_SURGE"),
 )
 
 CONTEXT = (

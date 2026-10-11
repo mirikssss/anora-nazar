@@ -17,7 +17,10 @@ from node.modules.features.domain import (
     Point,
     Value,
     assemble,
+    first_credit,
+    income_features,
     load_feature_config,
+    share,
     zone1_features,
     zone2_features,
     zone3_features,
@@ -74,11 +77,56 @@ def _first_credit_share(
     """Доля «первый кредит» среди участников группы идентичности, у кого есть ответ бюро."""
     if len(members) < 2:
         return None
-    found = ingest.latest_facts_by_subject(session, realm, "bureau.report", list(members), as_of)
-    answers = [BureauReport.model_validate(p) for p in found.values()]
-    if not answers:
-        return None
-    return round(sum(1 for b in answers if b.active_loans + b.closed_loans == 0) / len(answers), 4)
+    return _bureau_first_credit_share(session, realm, set(members), as_of)
+
+
+def _bureau_first_credit_share(
+    session: Session, realm: RealmContext, people: set[str], as_of: datetime
+) -> float | None:
+    found = ingest.latest_facts_by_subject(session, realm, "bureau.report", sorted(people), as_of)
+    return share([first_credit(BureauReport.model_validate(p)) for p in found.values()])
+
+
+def _cohort_features(
+    session: Session,
+    realm: RealmContext,
+    application_id: UUID,
+    as_of: datetime,
+    policy: Policy,
+    cfg: FeatureConfig,
+) -> dict[str, Value]:
+    """Состав групп по ролям (Блок 3, «Состав группы», «Концентрация на сотруднике», «Работодатель-новичок»)."""
+    roles = policy.coordination.roles if policy.coordination else []
+    cohorts = index.role_cohorts(session, realm, application_id, roles, cfg.zone2.cohort_window_days, as_of)
+    shares = [
+        s
+        for people in cohorts.values()
+        if len(people) > 1 and (s := _bureau_first_credit_share(session, realm, people, as_of)) is not None
+    ]
+    window = cfg.zone3.concentration.window_days
+    values: dict[str, Value] = {
+        "coordination_first_credit_share": max(shares, default=None),
+        "employee_linked_share": index.linked_share(session, realm, application_id, "employee", window, as_of, policy),
+        "employer_cohort_size": None,
+        "employer_cohort_income_alarm_share": None,
+    }
+    employer = index.role_cohorts(
+        session, realm, application_id, ["employer"], cfg.zone3.employer_cohort_days, as_of
+    ).get("employer")
+    if employer is None:
+        return values
+    values["employer_cohort_size"] = len(employer)
+    if len(employer) > policy.index.hub_thresholds.get("employer", len(employer)):
+        return values  # крупный работодатель — шумный хаб, волна его заявок признаком не считается
+    found = ingest.latest_facts_by_subject(session, realm, "inps.contributions", sorted(employer), as_of)
+    alarms = [
+        alarm
+        for p in found.values()
+        if (alarm := income_features(InpsContributions.model_validate(p), cfg.zone3.income)["income_cusum_alarm"])
+        is not None
+    ]
+    values["employer_cohort_income_alarm_share"] = share([bool(a) for a in alarms])
+    return values
 
 
 def compute(
@@ -96,6 +144,7 @@ def compute(
     facts = _facts(session, realm, snapshot, subject, as_of)
     view = index.group_view(session, realm, application_id, as_of, policy)
     parts = zone2_features(view, _first_credit_share(session, realm, view.member_subjects, as_of))
+    parts |= _cohort_features(session, realm, application_id, as_of, policy, cfg)
     if point == "T1":
         devices = index.device_subjects(session, realm, application_id, as_of, cfg.zone1.device_shared_window_days)
         parts |= zone1_features(snapshot, as_of, facts, devices, cfg)

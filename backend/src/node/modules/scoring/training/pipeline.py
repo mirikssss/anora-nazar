@@ -61,7 +61,7 @@ def run(
         if version is not None:
             repository.add(session, version)
             versions.append(version)
-    timing = point_in_time.check(session, realm, policy, index_key, cfg.point_in_time_sample, int(cfg.lightgbm["seed"]))
+    timing = point_in_time.check(session, realm, policy, index_key, cfg.point_in_time_sample, cfg.seed)
     report = {
         "point_in_time": timing.as_dict(),
         "config": cfg.version,

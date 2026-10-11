@@ -54,7 +54,7 @@ def main() -> None:
     x, y, months, names, categorical = _load(args.csv)
     train = np.isin(months, list(TRAIN_MONTHS))
     data = lgb.Dataset(x[train], label=y[train], feature_name=names, categorical_feature=categorical)
-    booster = lgb.train(dict(cfg.lightgbm), data)
+    booster = lgb.train(dict(cfg.lightgbm), data, num_boost_round=cfg.boosting.max_rounds)
     scores = np.asarray(booster.predict(x[~train]))
     result = metrics(y[~train], scores, review_shares=cfg.review_shares, fpr=cfg.fpr, probabilities=None)
     print(json.dumps({"dataset": args.csv.name, "config": cfg.version, "test_months": [6, 7], **result}))

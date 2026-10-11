@@ -313,3 +313,33 @@ def concentrations(
         helper_burst_ratio=helper_burst,
         helper_supplier_share=helper_supplier,
     )
+
+
+def role_cohorts(
+    session: Session, realm: RealmContext, application_id: UUID, roles: list[str], days: int, as_of: datetime
+) -> dict[str, set[str]]:
+    """Кто ещё подавал заявки через те же роли за последние days дней: роль → люди (вместе с заявителем)."""
+    since = as_of - timedelta(days=days)
+    own = repository.own_attributes(session, application_id, roles, as_of)
+    return {
+        kind: set(repository.holders(session, realm.visible_ids, kind, key, since, as_of).values())
+        for kind, (key, _display) in own.items()
+    }
+
+
+def linked_share(
+    session: Session, realm: RealmContext, application_id: UUID, role: str, days: int, as_of: datetime, policy: Policy
+) -> float | None:
+    """Доля заявок этой роли за окно, у которых есть редкая общая связь идентичности с другим человеком."""
+    own = repository.own_attributes(session, application_id, [role], as_of).get(role)
+    if own is None:
+        return None
+    since = as_of - timedelta(days=days)
+    apps = repository.holders(session, realm.visible_ids, role, own[0], since, as_of)
+    window = window_start(as_of, policy.index)
+    attrs = repository.attributes_of(session, realm.visible_ids, apps, policy.index.identity_kinds, window, as_of)
+    counts = repository.subject_counts(
+        session, realm.visible_ids, {(k, key) for _a, k, key, _d in attrs}, window, as_of
+    )
+    linked = {app for app, kind, key, _d in attrs if is_rare_shared(policy.index, kind, counts[(kind, key)])}
+    return round(len(linked) / len(apps), 4) if apps else None

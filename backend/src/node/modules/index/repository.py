@@ -132,6 +132,18 @@ def kind_totals(
     return int(row[0]), int(row[1])
 
 
+def holders(
+    session: Session, realm_ids: tuple[UUID, ...], kind: str, key: str, since: datetime, as_of: datetime
+) -> dict[UUID, str]:
+    """Заявки с этим атрибутом в окне и их заявители: заявка → ключ человека."""
+    rows = session.execute(
+        select(Occurrence.application_id, Occurrence.subject_key)
+        .where(_window(realm_ids, since, as_of), Occurrence.attr_kind == kind, Occurrence.attr_key == key)
+        .distinct()
+    )
+    return {app: subject for app, subject in rows}
+
+
 def own_attributes(
     session: Session, application_id: UUID, kinds: Iterable[str], as_of: datetime
 ) -> dict[str, tuple[str, str]]:

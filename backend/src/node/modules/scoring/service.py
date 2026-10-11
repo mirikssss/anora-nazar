@@ -7,14 +7,13 @@ from dataclasses import dataclass, field
 from threading import Lock
 from uuid import UUID
 
-import lightgbm as lgb
 import numpy as np
 from sqlalchemy.orm import Session
 
 from node.modules.features.domain import FeatureVector
 from node.modules.policy.domain import ModelPolicy
 from node.modules.realms.domain import RealmContext
-from node.modules.scoring import repository
+from node.modules.scoring import predictors, repository
 from node.modules.scoring.domain import (
     ModelScore,
     ScoringOutcome,
@@ -25,21 +24,22 @@ from node.modules.scoring.domain import (
     top_contributions,
 )
 from node.modules.scoring.models import ModelVersion
+from node.modules.scoring.predictors import Predictor
 
 
 @dataclass
 class ModelCache:
-    """Загруженные бустеры по id версии: версия неизменна, поэтому кэш не устаревает."""
+    """Загруженные предсказатели по id версии: версия неизменна, поэтому кэш не устаревает."""
 
-    _boosters: dict[UUID, lgb.Booster] = field(default_factory=dict)
+    _predictors: dict[UUID, Predictor] = field(default_factory=dict)
     _lock: Lock = field(default_factory=Lock)
 
-    def booster(self, version: ModelVersion) -> lgb.Booster:
+    def predictor(self, version: ModelVersion) -> Predictor:
         with self._lock:
-            found = self._boosters.get(version.id)
+            found = self._predictors.get(version.id)
             if found is None:
-                found = lgb.Booster(model_str=version.artifact)
-                self._boosters[version.id] = found
+                found = predictors.load(version.kind, version.artifact)
+                self._predictors[version.id] = found
             return found
 
 
@@ -68,10 +68,10 @@ def shadow_versions(session: Session, active: dict[str, ModelVersion]) -> list[M
 
 def score(cache: ModelCache, version: ModelVersion, vector: FeatureVector, top: int) -> ModelScore:
     names = list(version.feature_names)
-    row = np.array([feature_row(names, vector.values)])
-    booster = cache.booster(version)
-    raw = float(booster.predict(row)[0])
-    contributions = [float(c) for c in booster.predict(row, pred_contrib=True)[0][:-1]]
+    row = np.array(feature_row(names, vector.values), dtype=float)
+    predictor = cache.predictor(version)
+    raw = float(predictor.raw(row[None, :])[0])
+    contributions = predictor.contributions(row)
     return ModelScore(
         model_version_id=str(version.id),
         name=version.name,

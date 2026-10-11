@@ -1,32 +1,81 @@
-# Обучение и выпуск моделей. СТАТУС: предложено, ждёт согласования владельцем.
+# Обучение и выпуск моделей. СТАТУС: значения с пометкой «предложено» ждут согласования владельцем.
 # Правка — новая версия файла; версия и параметры попадают в запись обучения каждой модели.
-version: scoring-config-1
-feature_set: fs-2
+version: scoring-config-2
+feature_set: fs-3
 
-# По времени оценки внутри канала (Блок 3, «Валидация»). Строго: из обучения убирается всё, что связано с тестом
-# через человека, телефон, устройство, адрес или дело, и все поставщики тестовых схем.
-split: {train: 0.7, calibration: 0.1, test: 0.2}
+# Скользящая проверка по времени (Блок 3, «Валидация»): последние test_span меток канала делятся на folds окон;
+# каждое окно предсказывает модель, обученная только на более раннем. Из обучения окна убирается всё, что связано
+# с мошенниками окна через человека, телефон, устройство, адрес или дело, и поставщики их схем.
+# Выпускаемая модель обучается на всех метках с выбранными по проверке настройками.
+evaluation:
+  folds: 3                      # предложено
+  test_span: 0.45               # предложено: доля последних меток канала под окна проверки
+  validation_share: 0.15        # предложено: хвост обучения окна — ранняя остановка и калибровка окна
+
 weak_negative_weight: 0.3       # слабый негатив учит с меньшим весом (Блок 3, «Метки»)
 min_positives: 10               # меньше позитивов в обучении — модель не выпускается
-min_calibration_positives: 5    # меньше — калибровка по обучающей выборке с пометкой
+min_calibration_positives: 5    # калибровка по каналу — только если у канала столько позитивов
 review_share: 0.02              # рабочая доля ручной проверки: порог справедливости и нагрузки (Блок 3: 1–2 %)
 review_shares: [0.01, 0.02]     # recall и precision при этих долях проверки — в отчёте
-bootstrap_resamples: 1000       # 95 % доверительный интервал PR-AUC бутстрепом по тесту
-point_in_time_sample: 1000      # сколько прошлых решений пересчитать из сегодняшней базы на их as_of
 fpr: 0.05                       # recall при 5 % ложных тревог — для сравнения с BAF
+bootstrap_resamples: 1000       # 95 % доверительный интервал PR-AUC бутстрепом по заявкам проверки
+point_in_time_sample: 1000      # сколько прошлых решений пересчитать из сегодняшней базы на их as_of
 age_bands: [30, 45, 60]         # predictive equality по возрасту: <30, 30–44, 45–59, 60+
+candidates: [lightgbm, logistic]   # предложено: семейство выбирается по PR-AUC скользящей проверки
 
-lightgbm:
+lightgbm:                       # предложено: сильнее регуляризация под десятки позитивов
   objective: binary
-  num_leaves: 15
-  learning_rate: 0.05
-  num_boost_round: 300
-  min_data_in_leaf: 20
-  feature_fraction: 0.9
+  metric: average_precision
+  num_leaves: 7
+  learning_rate: 0.03
+  min_data_in_leaf: 40
+  lambda_l2: 5.0
+  feature_fraction: 0.8
   bagging_fraction: 0.8
   bagging_freq: 1
   seed: 20261011
   verbose: -1
+boosting:
+  max_rounds: 600               # предложено
+  early_stopping_rounds: 50     # предложено: по PR-AUC хвоста обучения окна
+
+logistic:                       # предложено: простая альтернатива с пропусками как отдельными признаками
+  c: 0.5
+  max_iter: 2000
+
+# Монотонность по логике сигналов Блока 3 (предложено): +1 — больше значение, не ниже риск; −1 — наоборот.
+# Признаки без ясного направления («первый кредит» у жертв с долгой историей, скорость формы) не ограничены.
+monotone:
+  minutes_since_access_recovery: -1
+  device_age_days: -1
+  device_subjects_30d: 1
+  remote_control_or_call: 1
+  amount_to_spending: 1
+  days_since_self_ban_lifted: -1
+  night_application: 1
+  independent_rare_links: 1
+  rare_links_weight: 1
+  group_recent_applications: 1
+  group_burst: 1
+  group_shared_roles: 1
+  group_first_credit_share: 1
+  coordination_max_ratio: 1
+  coordination_flagged_roles: 1
+  coordination_first_credit_share: 1
+  employee_linked_share: 1
+  price_robust_z: 1
+  supplier_age_days: -1
+  supplier_concentration_ratio: 1
+  branch_supplier_hhi: 1
+  employee_concentration_ratio: 1
+  helper_burst_ratio: 1
+  helper_supplier_share: 1
+  income_jump_ratio: 1
+  income_cusum_alarm: 1
+  voluntary_contributions_share: 1
+  employer_age_days: -1
+  employer_headcount_growth: 1
+  employer_cohort_income_alarm_share: 1
 
 models:                         # Блок 3: F1 в Т1, F2 в Т1 и Т4 с признаком канала, F3 в Т4
   - {name: f1-t1, typology: F1, points: [T1], groups: [context, zone1, zone2, zone3], calibrate_by_channel: false}

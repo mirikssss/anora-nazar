@@ -29,4 +29,6 @@ ZONE2 = (
     _graph("group_first_credit_share", "GRAPH_RARE_SHARED_LINKS"),
     _graph("coordination_max_ratio", "GRAPH_COORDINATION_CLUSTER"),
     _graph("coordination_flagged_roles", "GRAPH_COORDINATION_CLUSTER"),
+    _graph("coordination_first_credit_share", "GRAPH_COORDINATION_CLUSTER"),
+    _graph("employee_linked_share", "F3_EMPLOYEE_CONCENTRATION"),
 )

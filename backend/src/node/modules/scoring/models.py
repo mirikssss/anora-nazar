@@ -22,6 +22,7 @@ class ModelVersion(Base):
     typology: Mapped[str] = mapped_column(String(8))
     points: Mapped[list[str]] = mapped_column(JSONB)
     feature_set_version: Mapped[str] = mapped_column(String(32))
+    kind: Mapped[str] = mapped_column(String(16))  # lightgbm | logistic — формат артефакта
     feature_names: Mapped[list[str]] = mapped_column(JSONB)
     # артефакт — сотни килобайт: грузится только когда бустера ещё нет в кэше процесса
     artifact: Mapped[str] = mapped_column(Text, deferred=True)

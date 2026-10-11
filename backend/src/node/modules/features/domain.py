@@ -35,6 +35,10 @@ class Zone1Config(_Frozen):
     device_shared_window_days: int = Field(gt=0)
 
 
+class Zone2Config(_Frozen):
+    cohort_window_days: int = Field(gt=0)
+
+
 class PriceLevel(_Frozen):
     scope: Literal["district", "country"]
     days: int = Field(gt=0)
@@ -67,12 +71,14 @@ class Zone3Config(_Frozen):
     income: IncomeConfig
     concentration: ConcentrationConfig
     helper_burst_window_days: int = Field(gt=0)
+    employer_cohort_days: int = Field(gt=0)
 
 
 class FeatureConfig(_Frozen):
     version: str
     timezone: str
     zone1: Zone1Config
+    zone2: Zone2Config
     zone3: Zone3Config
 
 
@@ -80,7 +86,7 @@ def load_feature_config(version: str) -> FeatureConfig:
     return FeatureConfig.model_validate(load_yaml(CATALOG_DIR / f"{version}.yaml"))
 
 
-FEATURE_SET_VERSION = "fs-2"
+FEATURE_SET_VERSION = "fs-3"
 
 
 class FeatureVector(_Frozen):
@@ -198,10 +204,18 @@ def zone1_features(
         "form_seconds": None if session is None else session.form_seconds,
         "pasted_into_form": None if session is None else session.pasted,
         "amount_to_spending": spending,
-        "first_credit": None if bureau is None else bureau.active_loans + bureau.closed_loans == 0,
+        "first_credit": None if bureau is None else first_credit(bureau),
         "days_since_self_ban_lifted": None if lifted is None else float((as_of.date() - lifted).days),
         "night_application": start <= local_hour < end,
     }
+
+
+def share(flags: list[bool]) -> float | None:
+    return round(sum(flags) / len(flags), 4) if flags else None
+
+
+def first_credit(report: BureauReport) -> bool:
+    return report.active_loans + report.closed_loans == 0
 
 
 def zone2_features(view: GroupView, first_credit_share: float | None) -> dict[str, Value]:
