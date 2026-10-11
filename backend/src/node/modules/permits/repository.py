@@ -87,3 +87,17 @@ def counts_by_status(session: Session, realm_id: UUID) -> dict[str, int]:
         select(Permit.status, func.count()).where(Permit.realm_id == realm_id).group_by(Permit.status)
     )
     return {status: count for status, count in rows}
+
+
+def executed_applications(session: Session, realm_ids: tuple[UUID, ...], since: datetime) -> set[UUID]:
+    """Заявки с исполненным зачислением за период — выданные кредиты (ретро-поиск Т6)."""
+    return set(
+        session.scalars(
+            select(Permit.application_id).where(
+                Permit.realm_id.in_(realm_ids),
+                Permit.operation_type == "disbursement",
+                Permit.status == "executed",
+                Permit.reserved_at >= since,
+            )
+        )
+    )

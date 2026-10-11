@@ -8,11 +8,15 @@ from fastapi import FastAPI
 from node.background import NodeTasks
 from node.context import NodeContext
 from node.model_registry import IDEMPOTENCY
+from node.modules.cases.domain import CasesConfig
 from node.modules.policy.service import PolicyRegistry
 from node.modules.scoring.service import ModelCache
+from node.modules.scoring.training.config import load_training_config
+from node.modules.verification.domain import VerificationConfig
 from node.routes import include_routers
 from node.settings import NodeEnv, load_config
 from shared.clock import Clock, SystemClock
+from shared.config import load_yaml
 from shared.crypto.signing import Signer
 from shared.db import Database
 from shared.errors import install_error_handlers
@@ -35,19 +39,23 @@ def build_context(env: NodeEnv, clock: Clock) -> NodeContext:
         bank=ServiceClient(env.bank_sim_url, env.bank_sim_api_key, timeout_seconds=timeout, name="bank-sim"),
         anchor=ServiceClient(env.anchor_url, env.anchor_api_key, timeout_seconds=timeout, name="anchor"),
         models=ModelCache(),
+        cases_config=CasesConfig.model_validate(load_yaml(env.cases_config_path)),
+        verification_config=VerificationConfig.model_validate(load_yaml(env.verification_config_path)),
+        training_config=load_training_config(env.scoring_config_path),
     )
 
 
 def create_app(ctx: NodeContext, *, run_background: bool) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        runner = NodeTasks(ctx).loop() if run_background else None
-        if runner is not None:
+        tasks = NodeTasks(ctx)
+        runners = [tasks.loop(), tasks.training_loop()] if run_background else []
+        for runner in runners:
             runner.start()
         try:
             yield
         finally:
-            if runner is not None:
+            for runner in runners:
                 runner.stop()
             ctx.bank.close()
             ctx.anchor.close()

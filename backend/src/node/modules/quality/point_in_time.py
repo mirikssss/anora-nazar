@@ -41,7 +41,7 @@ def check(
 ) -> PointInTimeReport:
     rows = [
         d
-        for d in decisions.first_assessed(session, realm.id)
+        for d in decisions.first_assessed(session, realm.visible_ids)
         if d.record["inputs"]["features"]["set_version"] == FEATURE_SET_VERSION
     ]
     chosen = Random(seed).sample(rows, min(sample, len(rows)))

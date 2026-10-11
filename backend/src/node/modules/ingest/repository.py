@@ -178,3 +178,22 @@ def latest_payloads_by_subject(
         .order_by(SourceFact.subject_key, SourceFact.received_at.desc(), SourceFact.id.desc())
     )
     return {subject: payload for subject, payload in rows}
+
+
+def count_acts_by_signer(
+    session: Session, realm_ids: tuple[UUID, ...], type_: str, signer_id: str, signed_on: str, as_of: datetime
+) -> int:
+    """Сколько разных актов один подписант подписал в этот день, по данным к as_of."""
+    count: int = (
+        session.scalar(
+            select(func.count(func.distinct(SourceFact.entity_id))).where(
+                SourceFact.realm_id.in_(realm_ids),
+                SourceFact.type == type_,
+                SourceFact.received_at <= as_of,
+                SourceFact.payload["signer_id"].astext == signer_id,
+                SourceFact.payload["signed_on"].astext == signed_on,
+            )
+        )
+        or 0
+    )
+    return count

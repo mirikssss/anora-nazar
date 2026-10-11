@@ -12,17 +12,22 @@ from sqlalchemy.orm import Session
 from node.modules.index import repository
 from node.modules.index.domain import (
     APPLICANT,
+    EDGE_TYPES,
     Attribute,
     CoordinationSignal,
+    GraphEdge,
+    GraphNode,
     GroupView,
     RareLink,
     RoleConcentrations,
     SharedRole,
+    StopMatch,
     burst,
     coordination_signal,
     extract,
     independent_links,
     is_rare_shared,
+    keyed,
     link_weight,
     pace_ratio,
     smoothed_pace,
@@ -166,6 +171,7 @@ def group_view(
         component |= frontier
         hops += 1
 
+    signals, cohort = _coordination(session, realm, application_id, policy, as_of)
     seen = repository.first_seen(session, component)
     recent, background, flagged = burst(policy.group, index, list(seen.values()), as_of)
     subjects = repository.subjects_of(session, component)
@@ -178,8 +184,9 @@ def group_view(
         background_per_window=background,
         burst=flagged and len(component) > 1,
         shared_roles=_shared_roles(session, realm, application_id, component, policy, since, as_of),
-        coordination=_coordination(session, realm, application_id, policy, as_of),
+        coordination=signals,
         member_subjects=tuple(sorted(subjects)),
+        member_applications=tuple(sorted(component | cohort)),
     )
 
 
@@ -193,20 +200,25 @@ def _prior_pace(
 
 def _coordination(
     session: Session, realm: RealmContext, application_id: UUID, policy: Policy, as_of: datetime
-) -> list[CoordinationSignal]:
+) -> tuple[list[CoordinationSignal], set[UUID]]:
+    """Сигналы по ролям заявки и заявки когорты сработавших ролей за окно — состав группы координации."""
     rules = policy.coordination
     if rules is None:
-        return []
+        return [], set()
     index = policy.index
     since = window_start(as_of, index)
     recent_from = as_of - timedelta(days=rules.window_days)
     background_windows = (index.window_days - rules.window_days) / rules.window_days
-    signals = []
-    for kind, (key, display) in sorted(repository.own_attributes(session, application_id, rules.roles, as_of).items()):
+    signals, cohort = [], set()
+    own = repository.own_attributes(session, application_id, rules.roles, as_of)
+    for kind, (key, display) in sorted(own.items()):
         times = repository.role_times(session, realm.visible_ids, kind, key, since, as_of)
         prior = _prior_pace(session, realm, kind, since, recent_from, background_windows)
-        signals.append(coordination_signal(rules, index, kind, display, times, prior, as_of))
-    return signals
+        signal = coordination_signal(rules, index, kind, display, times, prior, as_of)
+        signals.append(signal)
+        if signal.flagged:
+            cohort |= set(repository.holders(session, realm.visible_ids, kind, key, recent_from, as_of))
+    return signals, cohort
 
 
 def _shared_roles(
@@ -343,3 +355,134 @@ def linked_share(
     )
     linked = {app for app, kind, key, _d in attrs if is_rare_shared(policy.index, kind, counts[(kind, key)])}
     return round(len(linked) / len(apps), 4) if apps else None
+
+
+def add_to_stop_list(
+    session: Session, realm_id: UUID, application_ids: set[UUID], kinds: list[str], case_id: UUID, now: datetime
+) -> int:
+    """Идентификаторы заявок подтверждённого дела — в стоп-лист своего контура."""
+    rows = {
+        (kind, key): display
+        for _app, kind, key, display, _subject in repository.attributes_of_applications(
+            session, application_ids, kinds, now
+        )
+    }
+    repository.add_stop_entries(
+        session,
+        [
+            {
+                "realm_id": realm_id,
+                "attr_kind": k,
+                "attr_key": key,
+                "attr_display": d,
+                "case_id": case_id,
+                "added_at": now,
+            }
+            for (k, key), d in rows.items()
+        ],
+    )
+    return len(rows)
+
+
+def stop_listed(
+    session: Session, realm: RealmContext, application_id: UUID, kinds: list[str], as_of: datetime
+) -> list[StopMatch]:
+    """Есть ли у заявки идентификатор из подтверждённого дела (стоп-лист банка)."""
+    own = repository.attributes_of_applications(session, [application_id], kinds, as_of)
+    matches = repository.stop_matches(session, realm.visible_ids, [(k, key) for _a, k, key, _d, _s in own], as_of)
+    return [StopMatch(kind=m.attr_kind, display=m.attr_display, case_id=str(m.case_id)) for m in matches]
+
+
+def record_card(
+    session: Session,
+    realm_id: UUID,
+    application_id: UUID,
+    version: int,
+    subject_key: str,
+    card: str,
+    secret: bytes,
+    received_at: datetime,
+) -> tuple[str, str]:
+    """Карта-получатель первого перевода — появление в индексе (Т3); возвращает ключ и маску."""
+    key, display = keyed(secret, "card", card), "•" * 12 + card[-4:]
+    repository.insert_many(
+        session,
+        [
+            {
+                "realm_id": realm_id,
+                "application_id": application_id,
+                "application_version": version,
+                "subject_key": subject_key,
+                "attr_kind": "card",
+                "attr_key": key,
+                "attr_display": display,
+                "role": "recipient",
+                "occurred_at": received_at,
+                "received_at": received_at,
+            }
+        ],
+    )
+    return key, display
+
+
+def card_subjects(session: Session, realm: RealmContext, key: str, days: int, as_of: datetime) -> int:
+    """Сколько разных заёмщиков переводили на эту карту за days дней."""
+    pair = ("card", key)
+    return repository.subject_counts(session, realm.visible_ids, [pair], as_of - timedelta(days=days), as_of).get(
+        pair, 0
+    )
+
+
+def sharing_applications(
+    session: Session, realm: RealmContext, application_ids: set[UUID], kinds: list[str], days: int, as_of: datetime
+) -> dict[UUID, set[str]]:
+    """Другие заявки за days дней с общими идентификаторами (ретро-поиск Т6): заявка → виды общих связей."""
+    own = repository.attributes_of_applications(session, application_ids, kinds, as_of)
+    pairs = {(kind, key) for _a, kind, key, _d, _s in own}
+    found: dict[UUID, set[str]] = {}
+    since = as_of - timedelta(days=days)
+    for app, kind, _key, _subject in repository.applications_with(session, realm.visible_ids, pairs, since, as_of):
+        if app not in application_ids:
+            found.setdefault(app, set()).add(kind)
+    return found
+
+
+def case_graph(
+    session: Session, realm: RealmContext, application_ids: set[UUID], as_of: datetime, policy: Policy
+) -> tuple[list[GraphNode], list[GraphEdge]]:
+    """Подграф дела: заявки, люди и их атрибуты; соседи — другие заявки с редкими общими атрибутами идентичности."""
+    kinds = ["pinfl", *EDGE_TYPES]
+    own = repository.attributes_of_applications(session, application_ids, kinds, as_of)
+    since = window_start(as_of, policy.index)
+    identity = [(kind, key) for _a, kind, key, _d, _s in own if kind in policy.index.identity_kinds]
+    counts = repository.subject_counts(session, realm.visible_ids, identity, since, as_of)
+    rare = {pair for pair in identity if is_rare_shared(policy.index, pair[0], counts.get(pair, 0))}
+    neighbours = repository.applications_with(session, realm.visible_ids, rare, since, as_of)
+    nodes: dict[str, GraphNode] = {}
+    edges: set[GraphEdge] = set()
+
+    def application(app: UUID) -> str:
+        node_id = f"application:{app}"
+        nodes.setdefault(node_id, GraphNode(id=node_id, type="application", display="", application_id=str(app)))
+        return node_id
+
+    for app, kind, key, display, subject in own:
+        source = application(app)
+        if kind == "pinfl":
+            person = f"person:{subject}"
+            nodes.setdefault(person, GraphNode(id=person, type="person", display=display))
+            edges.add(GraphEdge(source=source, target=person, type="applicant", rare=False))
+            continue
+        target = f"{kind}:{key}"
+        nodes.setdefault(target, GraphNode(id=target, type=kind, display=display))
+        edges.add(GraphEdge(source=source, target=target, type=EDGE_TYPES[kind], rare=(kind, key) in rare))
+    for app, kind, key, _subject in neighbours:
+        if app not in application_ids:
+            edges.add(GraphEdge(source=application(app), target=f"{kind}:{key}", type="shared_identifier", rare=True))
+    return list(nodes.values()), sorted(edges, key=lambda e: (e.source, e.target))
+
+
+def case_attributes(
+    session: Session, application_ids: set[UUID], kinds: list[str], as_of: datetime
+) -> list[tuple[UUID, str, str, str, str]]:
+    return repository.attributes_of_applications(session, application_ids, kinds, as_of)

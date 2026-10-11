@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from node.database import Base
@@ -62,3 +63,19 @@ class ProgramContract(Base):
         Index("ix_program_contracts_helper", "helper_key", "received_at"),
         Index("ix_program_contracts_received", "realm_id", "received_at"),
     )
+
+
+class StopListEntry(Base):
+    """Стоп-лист банка: идентификатор из подтверждённого дела (Блок 4) — правило продукта «не ниже красного»."""
+
+    __tablename__ = "stop_list"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    realm_id: Mapped[UUID] = mapped_column(ForeignKey("realms.id", ondelete="CASCADE"))
+    attr_kind: Mapped[str] = mapped_column(String(32))
+    attr_key: Mapped[str] = mapped_column(String(64))
+    attr_display: Mapped[str] = mapped_column(String(64))
+    case_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True))
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (Index("ix_stop_list_attr", "attr_kind", "attr_key"),)

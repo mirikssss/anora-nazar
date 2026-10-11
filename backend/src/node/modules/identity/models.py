@@ -25,6 +25,7 @@ class StaffUser(Base):
     role_code: Mapped[str] = mapped_column(ForeignKey("staff_roles.code"))
     display_name: Mapped[str] = mapped_column(String(128))
     division: Mapped[str] = mapped_column(String(256))
+    branch_id: Mapped[str | None] = mapped_column(String(32))  # сотрудник филиала: не ведёт дела своего филиала
 
 
 class ApiClient(Base):

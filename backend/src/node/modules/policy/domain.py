@@ -1,5 +1,6 @@
 """Политика как данные: разбор YAML и выбор действия. Без ввода-вывода."""
 
+import copy
 from datetime import timedelta
 from typing import Any, Literal
 
@@ -9,6 +10,7 @@ from node.modules.policy.reasons import CatalogEntry, Level, Reason, Typology
 from shared.errors import ConfigurationError
 
 Point = Literal["T1", "T4"]
+PointAny = Literal["T1", "T3", "T4"]
 Channel = Literal["online", "program"]
 MandatoryCheck = Literal["self_ban_active", "bureau_blocked", "biometry_failed", "phone_not_owned"]
 
@@ -80,6 +82,22 @@ class ModelPolicy(_Frozen):
     top_contributions: int = Field(gt=0)
 
 
+class TransferPolicy(_Frozen):
+    """Т3: большая доля кредита в первые часы на новую карту, связанную с другими заёмщиками, — красный."""
+
+    credit_share_min: float = Field(gt=0, le=1)
+    within_hours: int = Field(gt=0)
+    linked_borrowers_min: int = Field(gt=1)
+    window_days: int = Field(gt=0)
+
+
+class AcceptancePolicy(_Frozen):
+    """Т5: пакет актов одного подписанта в один день или поставщик из стоп-листа — удержание оплаты."""
+
+    batch_acts_per_signer_day: int = Field(gt=1)
+    required_check: str
+
+
 class MandatoryRule(_Frozen):
     code: str
     check: MandatoryCheck
@@ -111,6 +129,8 @@ class Policy(_Frozen):
     group: GroupPolicy
     coordination: CoordinationPolicy | None = None
     model: ModelPolicy | None = None
+    transfers: TransferPolicy | None = None
+    acceptance: AcceptancePolicy | None = None
     mandatory_rules: list[MandatoryRule]
     product_rules: list[ProductRule]
     actions: Actions
@@ -147,3 +167,23 @@ def resolve_action(policy: Policy, point: Point, level: Level, leading: Reason |
             continue
         return rule.action
     raise ConfigurationError(f"В политике {policy.version} нет действия для {point}, {leading.typology}, {level}")
+
+
+def apply_changes(raw: dict[str, Any], changes: dict[str, float], editable: list[str], version: str) -> dict[str, Any]:
+    """Новая версия из базовой: только разрешённые числовые пути; результат проходит проверку схемы политики."""
+    content = copy.deepcopy(raw)
+    for path, value in changes.items():
+        if path not in editable:
+            raise ValueError(f"Порог {path} меняется только новой версией файла политики")
+        *parents, leaf = path.split(".")
+        node: Any = content
+        for part in parents:
+            node = node.get(part) if isinstance(node, dict) else None
+            if node is None:
+                raise ValueError(f"В политике нет раздела для {path}")
+        if not isinstance(node, dict) or not isinstance(node.get(leaf), int | float):
+            raise ValueError(f"{path} — не числовой порог")
+        node[leaf] = type(node[leaf])(value) if isinstance(node[leaf], int) and float(value).is_integer() else value
+    content["version"] = version
+    Policy.model_validate(content)
+    return content

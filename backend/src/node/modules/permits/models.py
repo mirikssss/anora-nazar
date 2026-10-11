@@ -75,7 +75,7 @@ class Hold(Base):
     realm_id: Mapped[UUID] = mapped_column(ForeignKey("realms.id", ondelete="CASCADE"))
     application_id: Mapped[UUID] = mapped_column(ForeignKey("applications.id", ondelete="CASCADE"), index=True)
     decision_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True))
-    required_check: Mapped[str] = mapped_column(String(32))
+    required_check: Mapped[str] = mapped_column(String(64))
     basis: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
     status: Mapped[str] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

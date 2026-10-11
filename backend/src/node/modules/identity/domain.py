@@ -28,6 +28,7 @@ class StaffPrincipal:
     division: str
     permissions: frozenset[str]
     realm_id: UUID
+    branch_id: str | None = None
 
 
 Principal = SystemPrincipal | StaffPrincipal

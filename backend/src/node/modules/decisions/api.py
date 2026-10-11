@@ -4,6 +4,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 
 from node.deps import Ctx, IdempotencyKey, Realm, require_permission, require_scope
 from node.modules.decisions import service
@@ -16,6 +17,8 @@ from node.modules.decisions.schemas import (
     ReplayOut,
 )
 from node.modules.identity.domain import StaffPrincipal, SystemPrincipal
+from node.modules.policy.reasons import Reason
+from shared.contracts.transfers import TransferRecommendationIn
 
 router = APIRouter(prefix="/v1", tags=["Решения"])
 Conveyor = Annotated[SystemPrincipal, Depends(require_scope("assessments"))]
@@ -57,3 +60,24 @@ def compare(decision_id: UUID, body: ComparisonIn, ctx: Ctx, realm: Realm, _: Vi
             session, realm, decision_id, ctx.policies, ctx.models, body.policy_version, body.model_version_ids
         )
         return ComparisonOut.model_validate(result)
+
+
+Transfers = Annotated[SystemPrincipal, Depends(require_scope("transfers"))]
+
+
+class TransferRecommendationOut(BaseModel):
+    recommendation_id: UUID
+    level: str
+    recommended_action: str
+    reasons: list[Reason]
+
+
+@router.post("/transfers/recommendations", response_model=TransferRecommendationOut)
+def recommend_transfer(
+    body: TransferRecommendationIn, ctx: Ctx, realm: Realm, _: Transfers
+) -> TransferRecommendationOut:
+    """Т3: рекомендация транзакционному антифроду банка; решение о переводе принимает он (ревью A)."""
+    now = ctx.clock.now()
+    assessing = ctx.assessing()
+    result = ctx.db.run(lambda session: service.recommend_transfer(session, assessing, realm, body, now))
+    return TransferRecommendationOut.model_validate(result)

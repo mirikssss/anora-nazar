@@ -13,15 +13,23 @@ def add(session: Session, event: OutboxEvent) -> None:
     session.add(event)
 
 
-def pending(session: Session, realm_id: UUID, limit: int) -> list[OutboxEvent]:
+def pending(session: Session, realm_id: UUID, limit: int, *, wait: bool = False) -> list[OutboxEvent]:
+    """Недоставленные события по порядку. wait — дождаться пачки, которую сейчас отправляет фон, вместо пропуска:
+    после ожидания PostgreSQL перепроверяет условие, и уже доставленные события не возвращаются."""
     return list(
         session.scalars(
             select(OutboxEvent)
             .where(OutboxEvent.realm_id == realm_id, OutboxEvent.delivered_at.is_(None))
             .order_by(OutboxEvent.id)
             .limit(limit)
-            .with_for_update(skip_locked=True)
+            .with_for_update(skip_locked=not wait)
         )
+    )
+
+
+def first_pending_id(session: Session, realm_id: UUID) -> int | None:
+    return session.scalar(
+        select(func.min(OutboxEvent.id)).where(OutboxEvent.realm_id == realm_id, OutboxEvent.delivered_at.is_(None))
     )
 
 

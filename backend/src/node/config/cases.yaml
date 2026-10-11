@@ -1,0 +1,35 @@
+# Дела, очереди, сроки, исходы и чек-листы (Блок 2, «Поток дела»; Блок 4, «Исходы дела», «Сроки и эскалации»).
+# Сроки Блока 4 — «предложение, сверить с банком»; остальные значения — предложено, ждут согласования.
+version: cases-config-1
+
+queues:                         # действие решения → очередь; зона — по типологии ведущей причины
+  online: {actions: [pause_for_call], zones: [1]}                    # антифрод-центр: зона 1 и Т3
+  group: {actions: [internal_review, independent_delivery_confirmation], zones: [2, 3]}   # внутренний контроль
+
+deadlines:
+  call_hours: 8                 # Блок 4: звонок аналитика — в течение рабочего дня
+  group_first_review_hours: 24  # Блок 4: первичный разбор дела группы — 1 рабочий день
+  participant_decision_days: 5  # Блок 4: решение по каждому участнику — до 5 рабочих дней
+
+outcomes:                       # Блок 4: исход → что можно сделать; label — что уходит в обучение
+  confirmed_fraud: {application: refuse, stop_list: true, label: positive}
+  confirmed_coercion: {application: cancel, stop_list: false, label: positive}
+  reasonable_suspicion: {application: refuse, stop_list: false, label: null}
+  unable_to_verify: {application: keep_hold, stop_list: false, label: null}
+  false_positive: {application: release, stop_list: false, label: strong_negative}
+
+participant_actions: [hold, release, refuse]
+participant_roles: [organizer, straw_borrower, victim, involved_employee, involved_helper, involved_supplier, uninvolved]
+
+checklists:                     # Блок 2, шаг 4 потока дела
+  "1": [independent_number_from_registry, questions_outside_script, pressure_confirmed_or_denied]
+  "2": [call_applicants, attendance, counterparties, money_trail, employee_check]
+  "3": [second_estimate, call_borrowers_from_head_office, independent_delivery_confirmation]
+
+benign:                         # автоматические безобидные объяснения (Блок 2, шаг 3) — предложено
+  household: {}                 # общий адрес и телефон внутри домохозяйства; данных ЗАГС нет
+  payroll_project: {min_applicants: 5, window_days: 7, employer_min_age_days: 365}
+  program_batch: {window_days: 7, max_price_robust_z: 2.0, supplier_min_age_days: 365}
+
+retro_search_months: 12         # Блок 4: ретро-поиск по выданным кредитам за 12 месяцев
+stop_list_kinds: [phone, device, card, supplier]   # Блок 4: телефон, устройство, карта или ИНН из закрытого дела

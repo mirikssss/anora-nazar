@@ -30,6 +30,7 @@ class Operation(Base):
     amount: Mapped[int] = mapped_column(BigInteger)
     account: Mapped[str] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(String(32))
+    acceptance_act_id: Mapped[str | None] = mapped_column(String(32))  # Т5: оплата поставщику — по акту приёмки
     permit: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     refusal: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     outcome_reported: Mapped[bool] = mapped_column(Boolean)

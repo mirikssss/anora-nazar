@@ -33,8 +33,8 @@
 | Команда | Что делает |
 | --- | --- |
 | `python -m node migrate` / `seed` | миграции узла; общий мир, роли, сотрудники, ключи систем банка |
-| `python -m bank_sim migrate` / `seed` | миграции имитатора; роли, филиалы, сотрудники |
-| `python -m bank_sim world [--scale X]` | генерирует мир (`world/params/world-v1.yaml`), кладёт персонал в базу имитатора, прогоняет историю через узел (`/v1/history/batches`) |
+| `python -m bank_sim migrate` / `seed` | миграции имитатора; роли, филиалы, сотрудники, персоны заёмщиков |
+| `python -m bank_sim world [--scale X]` | генерирует мир (`world/params/world-v1.yaml`), кладёт персонал, помощников хокимов и поставщиков в базу имитатора, прогоняет историю через узел (`/v1/history/batches`) |
 | `python -m node train [--release-by A --approve-by B]` | обучает модели на общем мире (`config/scoring.yaml`), пишет отчёт качества; с двумя подписантами — выпускает версии |
 | `python -m node.modules.quality.external_baf <Base.csv>` | внешняя проверка на BAF; данные скачивает проверяющий |
 | `python -m anchor migrate` | миграции якоря |

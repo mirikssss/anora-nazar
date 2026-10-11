@@ -40,3 +40,8 @@ def accept(session: Session, messages: list[NotificationIn], now: datetime) -> i
 
 def recent(session: Session, realm_id: UUID, limit: int) -> list[NodeNotification]:
     return repository.recent(session, realm_id, limit)
+
+
+def for_application(session: Session, realm_id: UUID, application_id: str) -> list[NodeNotification]:
+    """Уведомления узла по одной заявке в порядке его outbox."""
+    return repository.for_application(session, realm_id, application_id)

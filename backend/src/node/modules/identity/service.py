@@ -42,6 +42,7 @@ def seed(session: Session, seeds_dir: Path) -> None:
                 "role_code": user["role"],
                 "display_name": user["display_name"],
                 "division": user["division"],
+                "branch_id": user.get("branch_id"),
             },
         )
     for client in load_yaml(seeds_dir / "api_clients.yaml")["api_clients"]:
@@ -66,6 +67,7 @@ def _staff_principal(user: StaffUser, role: StaffRole, realm_id: UUID) -> StaffP
         division=user.division,
         permissions=frozenset(role.permissions),
         realm_id=realm_id,
+        branch_id=user.branch_id,
     )
 
 

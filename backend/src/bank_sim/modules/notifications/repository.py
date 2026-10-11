@@ -24,3 +24,16 @@ def recent(session: Session, realm_id: UUID, limit: int) -> list[NodeNotificatio
             .limit(limit)
         )
     )
+
+
+def for_application(session: Session, realm_id: UUID, application_id: str) -> list[NodeNotification]:
+    return list(
+        session.scalars(
+            select(NodeNotification)
+            .where(
+                NodeNotification.realm_id == realm_id,
+                NodeNotification.payload["application_id"].astext == application_id,
+            )
+            .order_by(NodeNotification.message_id)
+        )
+    )

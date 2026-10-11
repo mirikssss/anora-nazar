@@ -2,14 +2,19 @@
 
 from collections.abc import Callable
 from datetime import datetime
+from functools import partial
 from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
 
+from bank_sim.context import BankContext
+from bank_sim.modules.failures import service as failures
 from bank_sim.modules.outbox import repository
 from bank_sim.modules.outbox.models import OutboxEvent
 from shared.errors import AppError
+
+Send = Callable[[dict[str, Any]], object]
 
 SCHEMA_VERSION = 1
 
@@ -71,12 +76,10 @@ def pending_stats(session: Session) -> dict[UUID, tuple[int, datetime]]:
     return repository.pending_stats(session)
 
 
-def deliver_realm(
-    session: Session, realm_id: UUID, send: Callable[[dict[str, Any]], object], limit: int, now: datetime
-) -> int:
+def _deliver(session: Session, events: list[OutboxEvent], send: Send, now: datetime) -> int:
     """По порядку, до первой ошибки: следующее событие не обгоняет недоставленное."""
     delivered = 0
-    for event in repository.pending(session, realm_id, limit):
+    for event in events:
         try:
             send(event.envelope)
         except AppError as exc:
@@ -85,3 +88,28 @@ def deliver_realm(
         repository.mark_delivered(session, event.id, now)
         delivered += 1
     return delivered
+
+
+def deliver_realm(session: Session, realm_id: UUID, send: Send, limit: int, now: datetime) -> int:
+    """Фоновая доставка. Голову очереди сейчас отправляет flush_realm — такт пропускает песочницу, а не обгоняет."""
+    batch = repository.pending(session, realm_id, limit)
+    if not batch or batch[0].id != repository.first_pending_id(session, realm_id):
+        return 0
+    return _deliver(session, batch, send, now)
+
+
+def flush_realm(ctx: BankContext, realm_id: UUID) -> bool:
+    """Доставляет очередь песочницы сразу, не дожидаясь фонового такта: факты источников и ответы клиента доходят
+    до узла раньше оценки и раньше следующего экрана. Сбои «очередь отстаёт» и «узел недоступен» держат очередь,
+    как и в фоне; недоставленное уйдёт фоном. True — очередь песочницы пуста."""
+    with ctx.db.transaction() as session:
+        if failures.delivery_held(failures.flags(session, realm_id)):
+            return False
+    send = partial(ctx.node.send_event, realm_id)
+    while True:
+        with ctx.db.transaction() as session:
+            batch = repository.pending(session, realm_id, ctx.config.outbox.batch_size, wait=True)
+            if not batch:
+                return True
+            if _deliver(session, batch, send, ctx.clock.now()) < len(batch):
+                return False

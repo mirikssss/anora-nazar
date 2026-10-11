@@ -1,16 +1,33 @@
-"""Прогон мира: персонал — в базу имитатора, история — в узел пакетами по времени получения."""
+"""Прогон мира: персонал и справочники программ — в базу имитатора, история — в узел пакетами по времени получения."""
 
 from collections import Counter
 from collections.abc import Callable
 
 from sqlalchemy.orm import Session
 
+from bank_sim.modules.program_platform import service as program
 from bank_sim.modules.staff import service as staff
 from shared.http import ServiceClient
 from world import World
 
 
 def store_staff(session: Session, world: World) -> None:
+    """Персонал и справочники программ мира — те же, что в истории узла."""
+    program.upsert_world(
+        session,
+        [{"id": h.id, "district": h.district, "mahalla": h.mahalla} for h in world.helpers],
+        [
+            {
+                "inn": s.inn,
+                "name": s.name,
+                "category": s.category,
+                "district": s.district,
+                "registered_on": s.registered_on,
+                "account": s.account,
+            }
+            for s in world.suppliers
+        ],
+    )
     staff.upsert_world(
         session,
         [{"id": b.id, "name": b.name, "district": b.district} for b in world.branches],

@@ -2,7 +2,17 @@
 version: node-config-1
 
 policy:
-  active_version: policy-v2
+  active_version: policy-v3
+  editable:                         # пороги, которые риск-менеджер меняет со вторым подписантом — предложено
+    - model.risk_appetite
+    - model.yellow_probability.F1
+    - model.yellow_probability.F2
+    - model.yellow_probability.F3
+    - group.min_independent_rare_links
+    - group.red_when.min_independent_rare_links
+    - coordination.min_ratio_to_pace
+    - transfers.credit_share_min
+    - acceptance.batch_acts_per_signer_day
 
 permits:
   reserve_ttl_seconds: 120          # резерв без итога → «неизвестно»
@@ -31,8 +41,20 @@ outbox:
         - application.reassessment_required
         - decision.made
         - hold.placed
+        - hold.released
         - permit.reserved
         - permit.finished
+
+risk:                               # обзор риск-менеджера — предложено
+  days: 30                          # доли уровней по дням
+  drift_recent_days: 7              # последнее окно против эталонного
+  drift_reference_days: 30
+  drift_bins: 10                    # PSI по децилям эталона
+  psi_floor: 0.0001                 # доля пустой корзины, чтобы логарифм был определён
+  drift_features: [amount_to_spending, device_age_days, independent_rare_links, price_robust_z, income_jump_ratio, loan_amount_log]
+
+texts:
+  active_catalog: texts-v1          # каталог текстов для сотрудников и заёмщиков (modules/texts/catalog)
 
 history:
   max_batch: 500                  # элементов истории в одном запросе прогона

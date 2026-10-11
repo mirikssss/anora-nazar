@@ -4,7 +4,7 @@ api_clients:
     scopes: [assessments]
     key_env: NODE_API_KEY_CONVEYOR
   - name: bank-sim-core-banking
-    scopes: [permits]
+    scopes: [permits, transfers]  # АБС и транзакционный антифрод: разрешения, итоги, рекомендация Т3
     key_env: NODE_API_KEY_CORE_BANKING
   - name: bank-sim-events
     scopes: [events]

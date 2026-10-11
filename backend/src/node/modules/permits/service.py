@@ -259,6 +259,7 @@ def place_hold(
     *,
     realm_id: UUID,
     application_id: UUID,
+    external_id: str,
     decision_id: UUID,
     required_check: str,
     basis: list[dict[str, Any]],
@@ -283,7 +284,7 @@ def place_hold(
     session.add(hold)
     event = {
         "hold_id": str(hold.id),
-        "application_id": str(application_id),
+        "application_id": external_id,
         "decision_id": str(decision_id),
         "required_check": required_check,
         "basis": basis,
@@ -291,6 +292,36 @@ def place_hold(
     audit.append(session, realm_id, "hold.placed", event, now)
     outbox.enqueue(session, config.outbox, realm_id, "hold.placed", event, now)
     return hold
+
+
+def release_holds(
+    session: Session,
+    *,
+    realm_id: UUID,
+    application_id: UUID,
+    external_id: str,
+    checks: set[str] | None,
+    actor: str,
+    reason: str,
+    config: NodeConfig,
+    now: datetime,
+) -> list[Hold]:
+    """Снимает действующие удержания заявки (все или с нужными проверками); каждое — в журнал и банку."""
+    released = [
+        h for h in repository.active_holds(session, application_id) if checks is None or h.required_check in checks
+    ]
+    for hold in released:
+        hold.status, hold.released_at, hold.released_by = "released", now, actor
+        event = {
+            "hold_id": str(hold.id),
+            "application_id": external_id,
+            "required_check": hold.required_check,
+            "reason": reason,
+            "released_by": actor,
+        }
+        audit.append(session, realm_id, "hold.released", event, now)
+        outbox.enqueue(session, config.outbox, realm_id, "hold.released", event, now)
+    return released
 
 
 def active_holds(session: Session, application_id: UUID) -> list[Hold]:
@@ -303,3 +334,7 @@ def applications_with_live_permits(session: Session, application_ids: list[UUID]
 
 def counts_by_status(session: Session, realm_id: UUID) -> dict[str, int]:
     return repository.counts_by_status(session, realm_id)
+
+
+def executed_applications(session: Session, realm_ids: tuple[UUID, ...], since: datetime) -> set[UUID]:
+    return repository.executed_applications(session, realm_ids, since)

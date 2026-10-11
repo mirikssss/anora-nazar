@@ -48,8 +48,7 @@ class BankTasks:
 
     @staticmethod
     def _can_deliver(session: Session, realm_id: UUID) -> bool:
-        flags = failures.flags(session, realm_id)
-        return not (flags.queue_lag or flags.node_unavailable)
+        return not failures.delivery_held(failures.flags(session, realm_id))
 
     def report_watermarks(self) -> None:
         now = self._ctx.clock.now()

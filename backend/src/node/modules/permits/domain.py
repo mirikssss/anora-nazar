@@ -12,6 +12,7 @@ REQUIRED_POINT: dict[str, str] = {"disbursement": "T1", "supplier_payment": "T4"
 class Refusal(StrEnum):
     APPLICATION_NOT_FOUND = "application_not_found"
     APPLICATION_CANCELLED = "application_cancelled"
+    APPLICATION_REFUSED = "application_refused"
     VERSION_GAP = "version_gap"
     QUEUE_LAG = "queue_lag"
     VERSION_MISMATCH = "version_mismatch"
@@ -29,6 +30,7 @@ class Refusal(StrEnum):
 MESSAGES: dict[Refusal, str] = {
     Refusal.APPLICATION_NOT_FOUND: "Заявка неизвестна узлу",
     Refusal.APPLICATION_CANCELLED: "Заявка отменена",
+    Refusal.APPLICATION_REFUSED: "В выдаче отказано по итогу проверки",
     Refusal.VERSION_GAP: "Узел ждёт пропущенную версию заявки",
     Refusal.QUEUE_LAG: "Очередь событий отстаёт: картина может быть неполной, операция ждёт",
     Refusal.VERSION_MISMATCH: "Версия заявки не совпадает с известной узлу",
@@ -93,6 +95,8 @@ def check(  # noqa: PLR0911, PLR0912 — проверки строго по по
     max_lag: float,
 ) -> RefusalResult | None:
     """Порядок проверок фиксирован: сначала полнота картины, потом актуальность оценки, потом сама операция."""
+    if app.status == "refused":
+        return RefusalResult(Refusal.APPLICATION_REFUSED)
     if app.status != "active":
         return RefusalResult(Refusal.APPLICATION_CANCELLED)
     if app.version_gap:

@@ -13,6 +13,7 @@ from node.database import Base
 
 ACTIVE = "active"
 CANCELLED = "cancelled"
+REFUSED = "refused"  # отказ в выдаче по итогу проверки дела
 
 
 class Application(Base):
@@ -42,7 +43,7 @@ class Application(Base):
 
     __table_args__ = (
         UniqueConstraint("realm_id", "external_id", name="uq_applications_realm_external"),
-        CheckConstraint(f"status in ('{ACTIVE}', '{CANCELLED}')", name="status"),
+        CheckConstraint(f"status in ('{ACTIVE}', '{CANCELLED}', '{REFUSED}')", name="status"),
         CheckConstraint("channel in ('online', 'program')", name="channel"),
     )
 

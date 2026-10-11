@@ -8,9 +8,9 @@ from fastapi import APIRouter, Depends
 from node.deps import Ctx, Realm, require_permission
 from node.modules.identity.domain import StaffPrincipal
 from node.modules.scoring import service
-from node.modules.scoring.models import ModelRelease
-from node.modules.scoring.schemas import ModelVersionOut, ReleaseOut
-from node.modules.scoring.training import release
+from node.modules.scoring.models import ModelRelease, TrainingRun
+from node.modules.scoring.schemas import ModelVersionOut, ReleaseOut, TrainingRunOut
+from node.modules.scoring.training import release, runs
 
 router = APIRouter(prefix="/v1/models", tags=["Модели"])
 Viewer = Annotated[StaffPrincipal, Depends(require_permission("quality.view"))]
@@ -59,3 +59,37 @@ def approve_release(release_id: UUID, ctx: Ctx, realm: Realm, staff: Promoter) -
     now = ctx.clock.now()
     with ctx.db.transaction() as session:
         return _release_out(release.approve(session, realm.id, release_id, staff.user_code, now))
+
+
+@router.get("/releases", response_model=list[ReleaseOut])
+def pending_releases(ctx: Ctx, realm: Realm, _: Viewer) -> list[ReleaseOut]:
+    """Выпуски, ждущие второго подписанта."""
+    with ctx.db.transaction() as session:
+        return [_release_out(r) for r in service.pending_releases(session, realm)]
+
+
+def _run_out(r: TrainingRun) -> TrainingRunOut:
+    return TrainingRunOut(
+        run_id=r.id,
+        status=r.status,
+        requested_by=r.requested_by,
+        requested_at=r.requested_at,
+        started_at=r.started_at,
+        finished_at=r.finished_at,
+        versions=r.versions,
+        error=r.error,
+    )
+
+
+@router.post("/training-runs", response_model=TrainingRunOut, status_code=202)
+def request_training(ctx: Ctx, realm: Realm, staff: Promoter) -> TrainingRunOut:
+    """Обучение на метках мира и своей песочницы; новые версии — в тень этого контура."""
+    now = ctx.clock.now()
+    with ctx.db.transaction() as session:
+        return _run_out(runs.request(session, realm, staff.user_code, now))
+
+
+@router.get("/training-runs", response_model=list[TrainingRunOut])
+def training_runs(ctx: Ctx, realm: Realm, _: Viewer) -> list[TrainingRunOut]:
+    with ctx.db.transaction() as session:
+        return [_run_out(r) for r in runs.runs(session, realm)]

@@ -9,7 +9,7 @@ from sqlalchemy import and_, distinct, func, insert, select, tuple_
 from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.orm import Session
 
-from node.modules.index.models import Occurrence, ProgramContract
+from node.modules.index.models import Occurrence, ProgramContract, StopListEntry
 
 Pair = tuple[str, str]
 
@@ -214,3 +214,46 @@ def comparable_prices(
     if district is not None:
         latest = latest.where(ProgramContract.district == district)
     return [row.unit_price for row in session.scalars(latest)]
+
+
+def attributes_of_applications(
+    session: Session, application_ids: Iterable[UUID], kinds: Iterable[str], as_of: datetime
+) -> list[tuple[UUID, str, str, str, str]]:
+    """Все атрибуты заявок, полученные к as_of: заявка, вид, ключ, маска, человек."""
+    ids, kinds = list(set(application_ids)), list(set(kinds))
+    if not ids or not kinds:
+        return []
+    rows = session.execute(
+        select(
+            Occurrence.application_id,
+            Occurrence.attr_kind,
+            Occurrence.attr_key,
+            Occurrence.attr_display,
+            Occurrence.subject_key,
+        )
+        .where(Occurrence.application_id.in_(ids), Occurrence.attr_kind.in_(kinds), Occurrence.received_at <= as_of)
+        .distinct()
+    )
+    return [(app, kind, key, display, subject) for app, kind, key, display, subject in rows]
+
+
+def add_stop_entries(session: Session, rows: list[dict[str, Any]]) -> None:
+    if rows:
+        session.execute(insert(StopListEntry), rows)
+
+
+def stop_matches(
+    session: Session, realm_ids: tuple[UUID, ...], pairs: Iterable[Pair], as_of: datetime
+) -> list[StopListEntry]:
+    pairs = list(set(pairs))
+    if not pairs:
+        return []
+    return list(
+        session.scalars(
+            select(StopListEntry).where(
+                StopListEntry.realm_id.in_(realm_ids),
+                StopListEntry.added_at <= as_of,
+                tuple_(StopListEntry.attr_kind, StopListEntry.attr_key).in_(pairs),
+            )
+        )
+    )

@@ -1,0 +1,16 @@
+# Проверка намерения в приложении (жёлтый, Т1) и сигнал «Меня просят взять кредит» (Блок 4, Блок 5).
+# Тексты вопросов и ответов — в каталоге текстов по кодам. Значения — предложено, ждут согласования.
+version: verification-1
+
+questions:                      # Блок 5: два вопроса, ответы кнопками, без ввода текста
+  - code: purpose_own_need      # «Деньги нужны лично вам или вашей семье?»
+    answers:
+      - {code: yes_own, alarming: false}
+      - {code: no_other_person, alarming: true}
+  - code: someone_instructs     # «Кто-нибудь сейчас подсказывает вам, что нажимать, или просил оформить кредит?»
+    answers:
+      - {code: no_one, alarming: false}
+      - {code: yes_someone, alarming: true}
+
+check: intent_check             # действие политики, которое закрывается проверкой намерения
+escalation: pause_for_call      # тревожный ответ или «Меня просят» — пауза до звонка аналитика

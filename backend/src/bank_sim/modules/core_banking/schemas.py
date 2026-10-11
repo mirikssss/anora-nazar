@@ -10,6 +10,12 @@ class OperationIn(BaseModel):
     application_id: str = Field(min_length=1, max_length=32)
     operation_type: Literal["disbursement", "supplier_payment"]
     tranche: int = Field(default=1, ge=1)
+    acceptance_act_id: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=32,
+        description="Акт приёмки этой заявки — обязателен для оплаты поставщику",
+    )
 
 
 class OperationOut(BaseModel):
@@ -21,6 +27,7 @@ class OperationOut(BaseModel):
     amount: int
     account: str
     status: str
+    acceptance_act_id: str | None
     permit: dict[str, Any] | None
     refusal: dict[str, Any] | None
     outcome_reported: bool

@@ -26,3 +26,30 @@ history:                          # прогон истории синтетич
   params_path: world/params/world-v1.yaml   # от корня пакетов backend/src
   batch_size: 200                 # элементов в одном запросе (у узла предел 500)
   timeout_seconds: 300            # пакет идёт дольше обычного вызова
+
+cards:                            # простое состояние карт клиентов банка
+  opening_balance: 400000         # предложено: остаток на карте до зачисления, если персона его не задаёт, сум
+
+transfers:                        # транзакционный антифрод банка (ТАФ, № 3759 п. 37)
+  own_rule:                       # своё правило ТАФ, когда узел недоступен (ревью A) — предложено
+    window_hours: 24              # перевод в первые сутки после зачисления
+    min_credit_share: 0.5         # доля кредитных денег в переводе не меньше половины
+    new_recipient_only: true      # только на новую для клиента карту
+
+borrower:                         # приложение заёмщика (Блок 5)
+  branch_id: ONLINE               # онлайн-канал без филиала — как online_branch_id мира world-v1
+  amount: {min: 500000, max: 50000000}   # предложено: как онлайн-суммы мира world-v1, сум
+  terms_months: [6, 12, 18, 24]   # предложено: как сроки онлайн-займов мира world-v1
+  screens:                        # проверка удержания (действие решения узла) → экран приложения
+    by_check:
+      continue: approved
+      intent_check: intent_check
+      pause_for_call: pause
+      internal_review: under_review
+      stop_by_norm: stopped
+    unknown_check: under_review   # неизвестная проверка — «на проверке», а не «одобрено»
+    priority: [stopped, pause, intent_check, under_review, approved]   # из нескольких удержаний — самый строгий
+
+scenarios:                        # готовые сценарии трёх зон: seeds/scenarios.yaml
+  pinfl_district_codes: [900, 999]   # предложено: код района в ПИНФЛ людей сценария — вне кодов мира (1–12)
+  house_numbers: [5000, 9999]     # предложено: номер дома людей сценария — вне домов мира, чтобы не связаться случайно

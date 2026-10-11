@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -29,6 +29,7 @@ class ModelVersion(Base):
     calibration: Mapped[dict[str, Any]] = mapped_column(JSONB)
     training: Mapped[dict[str, Any]] = mapped_column(JSONB)
     metrics: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    realm_id: Mapped[UUID | None] = mapped_column(ForeignKey("realms.id", ondelete="CASCADE"))  # где обучена
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
@@ -50,3 +51,21 @@ class ModelRelease(Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (Index("ix_model_releases_realm_name", "realm_id", "model_name", "approved_at"),)
+
+
+class TrainingRun(Base):
+    """Запуск обучения из контура: метки мира и песочницы → новые версии в тень → выпуск вторым подписантом."""
+
+    __tablename__ = "training_runs"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    realm_id: Mapped[UUID] = mapped_column(ForeignKey("realms.id", ondelete="CASCADE"), index=True)
+    requested_by: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(16))
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    versions: Mapped[list[str]] = mapped_column(JSONB)
+    error: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (CheckConstraint("status in ('queued', 'running', 'done', 'failed')", name="status"),)

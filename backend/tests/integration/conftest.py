@@ -254,6 +254,7 @@ def online(
     address: str | None = None,
     employer: str | None = None,
     employee: str | None = "EMP-01-1",
+    branch: str = "BR-01",
     amount: int = 30_000_000,
     self_ban: str = "none",
 ) -> dict[str, Any]:
@@ -263,7 +264,7 @@ def online(
             applicant[field] = value
     return {
         "channel": "online",
-        "branch_id": "BR-01",
+        "branch_id": branch,
         "employee_id": employee,
         "applicant": applicant,
         "loan": {"amount": amount, "term_months": 12},

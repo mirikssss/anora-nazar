@@ -36,3 +36,8 @@ def update(session: Session, realm_id: UUID, patch: FlagsPatch, now: datetime) -
 def ensure_node_reachable(current: Flags) -> None:
     if current.node_unavailable:
         raise UpstreamUnavailableError("node_unavailable", "Узел недоступен: операция ждёт его восстановления")
+
+
+def delivery_held(current: Flags) -> bool:
+    """Очередь событий песочницы в узел стоит: включён сбой «очередь отстаёт» или «узел недоступен»."""
+    return current.queue_lag or current.node_unavailable

@@ -26,3 +26,14 @@ class ReleaseOut(BaseModel):
     requested_at: datetime
     approved_by: str | None
     approved_at: datetime | None
+
+
+class TrainingRunOut(BaseModel):
+    run_id: UUID
+    status: Literal["queued", "running", "done", "failed"]
+    requested_by: str
+    requested_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+    versions: list[str]
+    error: str | None

@@ -1,13 +1,17 @@
 """Настройки имитатора: секреты и адреса — из окружения (BANK_SIM_), рабочие значения — config/bank_sim.yaml."""
 
 from pathlib import Path
+from typing import Self
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from bank_sim.modules.borrower_app.domain import ScreenRules
+from bank_sim.modules.transfers.domain import OwnRule
 from shared.config import load_yaml
 
 PACKAGE_DIR = Path(__file__).parent
+PACKAGES_DIR = PACKAGE_DIR.parent  # корень пакетов backend/src: от него — путь к параметрам мира
 
 
 class BankEnv(BaseSettings):
@@ -62,6 +66,37 @@ class HistoryConfig(_Frozen):
     timeout_seconds: float
 
 
+class CardsConfig(_Frozen):
+    opening_balance: int = Field(ge=0)
+
+
+class TransfersConfig(_Frozen):
+    own_rule: OwnRule
+
+
+class AmountRange(_Frozen):
+    min: int = Field(gt=0)
+    max: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def _ordered(self) -> Self:
+        if self.min > self.max:
+            raise ValueError("Нижняя граница суммы больше верхней")
+        return self
+
+
+class BorrowerConfig(_Frozen):
+    branch_id: str = Field(min_length=1)
+    amount: AmountRange
+    terms_months: list[int] = Field(min_length=1)
+    screens: ScreenRules
+
+
+class ScenariosConfig(_Frozen):
+    pinfl_district_codes: tuple[int, int]
+    house_numbers: tuple[int, int]
+
+
 class BankConfig(_Frozen):
     version: str
     producer: str
@@ -72,6 +107,14 @@ class BankConfig(_Frozen):
     http: HttpConfig
     database: DatabaseConfig
     history: HistoryConfig
+    cards: CardsConfig
+    transfers: TransfersConfig
+    borrower: BorrowerConfig
+    scenarios: ScenariosConfig
+
+    @property
+    def world_params_path(self) -> Path:
+        return PACKAGES_DIR / self.history.params_path
 
 
 def load_config(path: Path) -> BankConfig:

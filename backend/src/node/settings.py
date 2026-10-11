@@ -5,6 +5,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from node.modules.risk.domain import RiskConfig
 from shared.config import load_yaml
 
 PACKAGE_DIR = Path(__file__).parent
@@ -26,6 +27,8 @@ class NodeEnv(BaseSettings):
     policy_dir: Path = PACKAGE_DIR / "modules" / "policy" / "rules"
     seeds_dir: Path = PACKAGE_DIR / "seeds"
     scoring_config_path: Path = PACKAGE_DIR / "config" / "scoring.yaml"
+    cases_config_path: Path = PACKAGE_DIR / "config" / "cases.yaml"
+    verification_config_path: Path = PACKAGE_DIR / "config" / "verification.yaml"
 
 
 class _Frozen(BaseModel):
@@ -34,6 +37,7 @@ class _Frozen(BaseModel):
 
 class PolicyConfig(_Frozen):
     active_version: str
+    editable: list[str]
 
 
 class PermitsConfig(_Frozen):
@@ -79,6 +83,10 @@ class DatabaseConfig(_Frozen):
     pool_size: int
 
 
+class TextsConfig(_Frozen):
+    active_catalog: str
+
+
 class HistoryConfig(_Frozen):
     max_batch: int
 
@@ -94,6 +102,8 @@ class NodeConfig(_Frozen):
     background: BackgroundConfig
     outbox: OutboxConfig
     history: HistoryConfig
+    texts: TextsConfig
+    risk: RiskConfig
     http: HttpConfig
     database: DatabaseConfig
 

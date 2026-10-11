@@ -32,6 +32,8 @@ from node.modules.outbox import service as outbox
 from node.modules.permits import service as permits
 from node.modules.policy.domain import Policy
 from node.modules.realms.domain import RealmContext
+from node.modules.verification import service as verification
+from node.modules.verification.service import VerificationContext
 from node.settings import NodeConfig
 from shared.clock import Clock
 from shared.contracts.application import ApplicationSnapshot
@@ -48,6 +50,7 @@ class IntakeContext:
     index_key: bytes
     config: NodeConfig
     clock: Clock
+    verification: VerificationContext
 
 
 @dataclass(frozen=True)
@@ -289,6 +292,10 @@ def _source_fact(
     labels.record_from_fact(
         session, realm.id, envelope.type, envelope.payload, envelope.event_id, envelope.occurred_at, received_at
     )
+    # факт приложения о своей заявке: пометку ставит проверка намерения, и только при тревоге
+    own_application_fact = verification.handles(envelope.type)
+    if own_application_fact:
+        verification.on_fact(session, ctx.verification, realm, envelope.type, envelope.payload, received_at)
     repository.add_fact(
         session,
         {
@@ -304,7 +311,7 @@ def _source_fact(
             "received_at": received_at,
         },
     )
-    if subject is not None:
+    if subject is not None and not own_application_fact:
         ids = applications.open_ids_of_subject(session, realm.id, subject, received_at)
         locked = applications.lock(session, set(ids))
         cause = {
@@ -405,3 +412,9 @@ def latest_facts_by_subject(
     session: Session, realm: RealmContext, type_: str, subjects: list[str], as_of: datetime
 ) -> dict[str, dict[str, Any]]:
     return repository.latest_payloads_by_subject(session, realm.visible_ids, type_, subjects, as_of)
+
+
+def acts_by_signer(session: Session, realm: RealmContext, signer_id: str, signed_on: str, as_of: datetime) -> int:
+    return repository.count_acts_by_signer(
+        session, realm.visible_ids, "program.acceptance_act", signer_id, signed_on, as_of
+    )

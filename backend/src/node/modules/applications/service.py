@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from node.modules.applications import repository
 from node.modules.applications.domain import VersionOutcome, classify_version
-from node.modules.applications.models import ACTIVE, CANCELLED, Application
+from node.modules.applications.models import ACTIVE, CANCELLED, REFUSED, Application
 from shared.contracts.application import ApplicationSnapshot
 from shared.crypto.canonical_json import sha256_hex
 from shared.errors import ConflictError, NotFoundError
@@ -155,6 +155,12 @@ def cancel(app: Application, now: datetime) -> None:
     app.updated_at = now
 
 
+def refuse(app: Application, now: datetime) -> None:
+    """Отказ в этой выдаче по итогу проверки; новая заявка оценивается заново."""
+    app.status = REFUSED
+    app.updated_at = now
+
+
 def open_ids_of_subject(session: Session, realm_id: UUID, subject_key: str, now: datetime) -> list[UUID]:
     """Кого из заявок человека касается новый факт: оценка с истёкшим сроком и так будет пересчитана."""
     return repository.open_ids_of_subject(session, realm_id, subject_key, now)
@@ -173,3 +179,10 @@ def get_visible(session: Session, realm_ids: tuple[UUID, ...], external_id: str)
 
 def gaps_older_than(session: Session, before: datetime) -> list[Application]:
     return repository.gaps_older_than(session, before)
+
+
+def get_by_id(session: Session, application_id: UUID) -> Application:
+    app = session.get(Application, application_id)
+    if app is None:
+        raise NotFoundError("application_not_found", "Заявка не найдена")
+    return app

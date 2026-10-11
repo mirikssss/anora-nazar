@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from node.deps import Ctx, IdempotencyKey, Realm, require_scope
+from node.modules.acceptance import service as acceptance
 from node.modules.identity.domain import SystemPrincipal
 from node.modules.ingest import service as ingest
 from node.modules.permits import service
@@ -28,6 +29,16 @@ def request_permit(body: PermitIn, ctx: Ctx, realm: Realm, key: IdempotencyKey, 
     )
 
     def work(session: Session) -> dict[str, object]:
+        if body.acceptance_act_id is not None:
+            acceptance.guard(
+                session,
+                ctx.case_context(),
+                ctx.policies.active,
+                realm,
+                body.application_id,
+                body.acceptance_act_id,
+                now,
+            )
         lag = ingest.queue_lag_seconds(session, realm.id, ctx.config.queue.watched_producers, now)
         return service.request_permit(
             session,

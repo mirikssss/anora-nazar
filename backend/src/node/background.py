@@ -11,16 +11,19 @@ from node.context import NodeContext
 from node.modules.applications import service as applications
 from node.modules.audit import anchoring
 from node.modules.audit import service as audit
+from node.modules.cases import service as cases
 from node.modules.ingest import service as ingest
 from node.modules.outbox import service as outbox
 from node.modules.permits import service as permits
 from node.modules.realms import service as realms
+from node.modules.scoring.training import runs
 from shared.background import LeaderLoop, Task
 from shared.contracts.application import ApplicationSnapshot
 from shared.errors import AppError
 
 log = logging.getLogger(__name__)
 LEADER_LOCK = 0x4E415A4152  # «NAZAR»: один ключ на все экземпляры узла
+TRAINING_LOCK = 0x4E415A4154  # обучение — отдельный ведущий: долгий запуск не задерживает outbox и сверку
 RECONCILE_BATCH = 50
 
 
@@ -38,8 +41,21 @@ class NodeTasks:
             ("deliver_outbox", self.deliver_outbox),
             ("checkpoints", self.checkpoints),
             ("delete_inactive_sandboxes", self.delete_inactive_sandboxes),
+            ("escalate_cases", self.escalate_cases),
         ]
         return LeaderLoop(self._ctx.db, LEADER_LOCK, self._ctx.config.background.tick_seconds, tasks, "node-background")
+
+    def training_loop(self) -> LeaderLoop:
+        tasks: list[Task] = [("training_runs", self.training_runs)]
+        return LeaderLoop(self._ctx.db, TRAINING_LOCK, self._ctx.config.background.tick_seconds, tasks, "node-training")
+
+    def escalate_cases(self) -> None:
+        with self._ctx.db.transaction() as session:
+            cases.escalate_overdue(session, self._ctx.clock.now())
+
+    def training_runs(self) -> None:
+        ctx = self._ctx
+        runs.process_next(ctx.db, ctx.training_config, ctx.policies.active.policy, ctx.index_key, ctx.clock.now())
 
     def expire_reserved(self) -> None:
         now = self._ctx.clock.now()

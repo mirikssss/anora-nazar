@@ -20,6 +20,7 @@ def _out(op: Operation) -> OperationOut:
         amount=op.amount,
         account=op.account,
         status=op.status,
+        acceptance_act_id=op.acceptance_act_id,
         permit=op.permit,
         refusal=op.refusal,
         outcome_reported=op.outcome_reported,

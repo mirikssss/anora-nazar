@@ -54,9 +54,9 @@ def identifiers(snapshot: ApplicationSnapshot, labels: list[Label]) -> frozenset
 
 
 def build(session: Session, realm: RealmContext, cutoff: datetime, policy: Policy, index_key: bytes) -> list[Example]:
-    rows = decisions.first_assessed(session, realm.id)
+    rows = decisions.first_assessed(session, realm.visible_ids)
     known: dict[UUID, list[Label]] = {}
-    for label in labels.known_as_of(session, realm.id, [d.application_id for d in rows], cutoff):
+    for label in labels.known_as_of(session, realm.visible_ids, [d.application_id for d in rows], cutoff):
         known.setdefault(label.application_id, []).append(label)
     examples = []
     for decision in rows:

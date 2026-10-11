@@ -1,0 +1,177 @@
+# Персоны заёмщиков для приложения банка в демо. Люди вымышленные, данные синтетические, в форматах мира:
+# ПИНФЛ — цифра века и пола, ДДММГГ рождения, код района 9xx (вне кодов мира — не совпадёт с жителями мира),
+# номер и контрольная цифра; телефон — 998 и код оператора; счёт — 20 цифр; карта — 16 цифр.
+# sources — что о клиенте знают источники банка (бюро, карты, ИНПС), session — что видит сессионный антифрод
+# в сессии заявки. Эти факты уходят в узел перед оценкой. Значения — предложено, ждут согласования с владельцем.
+personas:
+  - code: muhabbat
+    display_name: Мухаббат
+    birth_date: 1965-03-14
+    summary: >-
+      Пенсионерка из Сырдарьинской области, 61 год. Приложение ей настроил сын, читает по-узбекски.
+      Сейчас ей звонят «из банка», просят восстановить доступ и диктуют, что нажимать.
+    profile:
+      applicant:
+        pinfl: "41403659010270"
+        phone: "998934417205"
+        device_id: dev-7c41e09a5d32b816
+        address: Сырдарья, район 1, махалля 3, дом 12
+        registration_mahalla: Сырдарья, район 1, махалля 3
+      account: "20206000904417205031"
+      card_balance: 350000
+      known_recipients: ["8600312245678011"]   # карта сына
+      sources:
+        bureau: {active_loans: 0, closed_loans: 2, self_ban_lifted_days_ago: 3}
+        cards: {monthly_spending: 1600000, months: 6}
+      session:
+        device_age_days: 0
+        access_recovered_minutes_before: 15
+        call_in_progress: true
+        form_seconds: 50
+        pasted: true
+
+  - code: dilshod
+    display_name: Дилшод
+    birth_date: 1992-07-21
+    summary: >-
+      Инженер из Ташкента, 34 года. Пользуется приложением несколько лет, берёт кредит на бытовую технику
+      в пределах обычных трат.
+    profile:
+      applicant:
+        pinfl: "32107929021145"
+        phone: "998901236574"
+        device_id: dev-1f9a3b7c0e2d4a65
+        address: Ташкент, район 2, махалля 5, дом 41
+        registration_mahalla: Ташкент, район 2, махалля 5
+        employer_inn: "301845572"
+      account: "20206000901236574012"
+      card_balance: 2800000
+      known_recipients: ["8600144598763320", "9860100245117834"]
+      sources:
+        bureau: {active_loans: 1, closed_loans: 4}
+        cards: {monthly_spending: 6500000, months: 6}
+        inps: {monthly: 6500, months: 15}
+      session:
+        device_age_days: 640
+        form_seconds: 260
+        pasted: false
+
+  - code: nodira
+    display_name: Нодира
+    birth_date: 1999-02-08
+    summary: >-
+      Учительница из Самарканда, 27 лет. Неделю назад сменила телефон, кредит берёт впервые — на ремонт.
+    profile:
+      applicant:
+        pinfl: "40802999033568"
+        phone: "998975530418"
+        device_id: dev-b25e8d01c7f46a39
+        address: Самарканд, район 1, махалля 8, дом 7
+        registration_mahalla: Самарканд, район 1, махалля 8
+      account: "20206000905530418027"
+      card_balance: 600000
+      known_recipients: ["8600551204397716"]
+      sources:
+        bureau: {active_loans: 0, closed_loans: 0}
+        cards: {monthly_spending: 2200000, months: 6}
+        inps: {monthly: 3100, months: 15}
+      session:
+        device_age_days: 6
+        form_seconds: 190
+        pasted: false
+
+  - code: sardor
+    display_name: Сардор
+    birth_date: 1981-11-30
+    summary: >-
+      Предприниматель из Ферганы, 44 года. Большие обороты по карте, кредиты берёт и закрывает регулярно.
+    profile:
+      applicant:
+        pinfl: "33011819042082"
+        phone: "998912874160"
+        device_id: dev-4d6c90e1a8b37f52
+        address: Фергана, район 3, махалля 2, дом 88
+        registration_mahalla: Фергана, район 3, махалля 2
+      account: "20206000902874160045"
+      card_balance: 9500000
+      known_recipients: ["8600770132458809", "8600770132451143", "9860120077314508"]
+      sources:
+        bureau: {active_loans: 2, closed_loans: 6}
+        cards: {monthly_spending: 12000000, months: 6}
+      session:
+        device_age_days: 910
+        form_seconds: 150
+        pasted: false
+
+  - code: gulnora
+    display_name: Гульнора
+    birth_date: 1974-05-17
+    summary: >-
+      Медсестра из Кашкадарьи, 52 года. Семья пользуется одним планшетом; кредит — на учёбу дочери.
+    profile:
+      applicant:
+        pinfl: "41705749054413"
+        phone: "998887412093"
+        device_id: dev-e03a7b5c91d24f80
+        address: Кашкадарья, район 2, махалля 6, дом 19
+        registration_mahalla: Кашкадарья, район 2, махалля 6
+        employer_inn: "205437718"
+      account: "20206000907412093018"
+      card_balance: 900000
+      known_recipients: ["8600239871650042"]
+      sources:
+        bureau: {active_loans: 0, closed_loans: 3}
+        cards: {monthly_spending: 3000000, months: 6}
+        inps: {monthly: 3400, months: 15}
+      session:
+        device_age_days: 310
+        form_seconds: 330
+        pasted: false
+
+  - code: jasur
+    display_name: Жасур
+    birth_date: 2003-09-02
+    summary: >-
+      Студент из Ташкента, 23 года. Первый кредит — на ноутбук; карта в банке недавно, траты небольшие.
+    profile:
+      applicant:
+        pinfl: "50209039060198"
+        phone: "998330561247"
+        device_id: dev-92c1f6a0b4e73d18
+        address: Ташкент, район 4, махалля 9, дом 3
+        registration_mahalla: Ташкент, район 4, махалля 9
+      account: "20206000900561247066"
+      card_balance: 150000
+      sources:
+        bureau: {active_loans: 0, closed_loans: 0}
+        cards: {monthly_spending: 1200000, months: 3}
+      session:
+        device_age_days: 210
+        form_seconds: 120
+        pasted: false
+
+  - code: rustam
+    display_name: Рустам
+    birth_date: 1968-01-25
+    summary: >-
+      Водитель из Самарканда, 58 лет. По просьбе «службы безопасности банка» поставил на телефон программу
+      удалённого доступа; доступ к приложению восстановили сорок минут назад.
+    profile:
+      applicant:
+        pinfl: "32501689075325"
+        phone: "998946603158"
+        device_id: dev-58f0d2a7c1e96b34
+        address: Самарканд, район 2, махалля 4, дом 52
+        registration_mahalla: Самарканд, район 2, махалля 4
+      account: "20206000906603158053"
+      card_balance: 1200000
+      known_recipients: ["8600408813276651"]
+      sources:
+        bureau: {active_loans: 1, closed_loans: 2}
+        cards: {monthly_spending: 2600000, months: 6}
+      session:
+        device_age_days: 720
+        access_recovered_minutes_before: 40
+        remote_control: true
+        form_seconds: 70
+        pasted: true

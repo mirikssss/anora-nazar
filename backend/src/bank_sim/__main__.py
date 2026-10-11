@@ -43,6 +43,7 @@ def main(argv: list[str]) -> None:
 def build_world(env: BankEnv, argv: list[str]) -> None:
     parser = argparse.ArgumentParser(prog="python -m bank_sim world")
     parser.add_argument("--scale", type=float, default=None)
+    parser.add_argument("--staff-only", action="store_true", help="только справочники персонала мира, без прогона")
     args = parser.parse_args(argv)
     config = load_config(env.config_path)
     params = load_params(PACKAGES_DIR / config.history.params_path, args.scale)
@@ -51,6 +52,8 @@ def build_world(env: BankEnv, argv: list[str]) -> None:
     with db.transaction() as session:
         history.store_staff(session, world)
     db.dispose()
+    if args.staff_only:
+        return
     gateway = NodeGateway(env, config.http.timeout_seconds)
     client = gateway.history(config.history.timeout_seconds)
     try:

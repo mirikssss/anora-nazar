@@ -1,8 +1,8 @@
 """Схемы входа и выхода API модуля."""
 
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class PermitIn(BaseModel):
@@ -12,6 +12,13 @@ class PermitIn(BaseModel):
     tranche: int = Field(default=1, ge=1)
     amount: int = Field(gt=0)
     account: str = Field(min_length=1, max_length=64)
+    acceptance_act_id: str | None = Field(default=None, min_length=1, max_length=64, description="Акт приёмки (Т5)")
+
+    @model_validator(mode="after")
+    def _act_for_supplier_payment(self) -> Self:
+        if self.operation_type == "supplier_payment" and self.acceptance_act_id is None:
+            raise ValueError("Оплате поставщику нужен акт приёмки")
+        return self
 
 
 class SignedPermit(BaseModel):

@@ -8,24 +8,30 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from bank_sim.context import BankContext
+from bank_sim.modules.cards import service as cards
 from bank_sim.modules.conveyor import service as conveyor
+from bank_sim.modules.conveyor.models import ConveyorApplication
 from bank_sim.modules.core_banking import repository
 from bank_sim.modules.core_banking.models import Operation
 from bank_sim.modules.core_banking.schemas import OperationIn
 from bank_sim.modules.failures import service as failures
+from bank_sim.modules.outbox import service as outbox
+from bank_sim.modules.program_platform import service as program
 from bank_sim.modules.sources import service as sources
-from shared.errors import AppError, ConflictError, NotFoundError, UpstreamUnavailableError
+from shared.errors import AppError, ConflictError, NotFoundError, UpstreamUnavailableError, ValidationFailedError
 
 IN_PROGRESS = "in_progress"
 EXECUTED = "executed"
 NOT_EXECUTED = "not_executed"
 REFUSED = "refused"
 WAITING_NODE = "waiting_node"
+DISBURSEMENT = "disbursement"
+SUPPLIER_PAYMENT = "supplier_payment"
 NodeStatus = Literal["executed", "not_executed", "in_progress"]
 
 
 def _permit_body(op: Operation) -> dict[str, Any]:
-    return {
+    body: dict[str, Any] = {
         "application_id": op.application_external_id,
         "application_version": op.application_version,
         "operation_type": op.operation_type,
@@ -33,6 +39,29 @@ def _permit_body(op: Operation) -> dict[str, Any]:
         "amount": op.amount,
         "account": op.account,
     }
+    if op.operation_type == SUPPLIER_PAYMENT:
+        body["acceptance_act_id"] = op.acceptance_act_id
+    return body
+
+
+def _acceptance_act(session: Session, realm_id: UUID, app: ConveyorApplication, body: OperationIn) -> str | None:
+    """Т5: оплата поставщику — только по акту приёмки этой заявки; у зачисления акта нет."""
+    if body.operation_type == DISBURSEMENT:
+        if body.acceptance_act_id is not None:
+            raise ValidationFailedError(
+                "acceptance_act_not_applicable", "Акт приёмки нужен только для оплаты поставщику"
+            )
+        return None
+    if body.acceptance_act_id is None:
+        raise ValidationFailedError(
+            "acceptance_act_required", "Оплата поставщику — только по акту приёмки: укажите акт этой заявки"
+        )
+    act = program.find_act(session, realm_id, body.acceptance_act_id)
+    if act is None:
+        raise ValidationFailedError("acceptance_act_not_found", "Акт приёмки не найден")
+    if act.application_id != app.external_id:
+        raise ValidationFailedError("acceptance_act_mismatch", "Акт приёмки относится к другой заявке")
+    return act.id
 
 
 def _finish(ctx: BankContext, realm_id: UUID, key: str, **changes: Any) -> Operation:
@@ -60,6 +89,7 @@ def _permit_is_genuine(ctx: BankContext, permit: dict[str, Any], op: Operation) 
 def _start(ctx: BankContext, session: Session, realm_id: UUID, body: OperationIn) -> Operation:
     """Новая попытка или продолжение той, что ждала узел, — с тем же ключом операции (ревью B)."""
     app = conveyor.get(session, realm_id, body.application_id)
+    act_id = _acceptance_act(session, realm_id, app, body)
     live = repository.live_for_update(session, realm_id, app.id, body.operation_type, body.tranche)
     now = ctx.clock.now()
     if live is not None:
@@ -67,6 +97,10 @@ def _start(ctx: BankContext, session: Session, realm_id: UUID, body: OperationIn
             raise ConflictError("already_executed", "Эта операция уже проведена: повторной проводки не будет")
         if live.status == IN_PROGRESS:
             raise ConflictError("operation_in_progress", "Проводка этой операции уже идёт")
+        if live.acceptance_act_id != act_id:
+            raise ConflictError(
+                "operation_waits_with_other_act", "Операция ждёт узел с другим актом приёмки: повтор — с тем же актом"
+            )
         live.status, live.refusal, live.updated_at = IN_PROGRESS, None, now
         return live
     amount, account = conveyor.operation_terms(app, body.operation_type)
@@ -81,6 +115,7 @@ def _start(ctx: BankContext, session: Session, realm_id: UUID, body: OperationIn
         amount=amount,
         account=account,
         status=IN_PROGRESS,
+        acceptance_act_id=act_id,
         permit=None,
         refusal=None,
         outcome_reported=False,
@@ -103,6 +138,8 @@ def execute(ctx: BankContext, realm_id: UUID, body: OperationIn) -> Operation:
     except IntegrityError as exc:
         raise ConflictError("operation_in_progress", "Проводка этой операции уже идёт") from exc
 
+    if body.operation_type == SUPPLIER_PAYMENT:
+        outbox.flush_realm(ctx, realm_id)  # акт приёмки должен дойти до узла раньше запроса Т5
     try:
         failures.ensure_node_reachable(flags)
         response = ctx.node.request_permit(realm_id, request_body, key)
@@ -132,9 +169,20 @@ def _settle(
         )
 
     executed = _finish(ctx, realm_id, key, status=EXECUTED, permit=permit)
-    if op.operation_type == "disbursement":
+    if op.operation_type == DISBURSEMENT:
         with ctx.db.transaction() as session:
-            sources.lock_after_disbursement(session, realm_id, pinfl, ctx.clock.now(), ctx.config.bureau.lock_hours)
+            now = ctx.clock.now()
+            sources.lock_after_disbursement(session, realm_id, pinfl, now, ctx.config.bureau.lock_hours)
+            cards.credit(
+                session,
+                realm_id,
+                application_id=op.application_external_id,
+                pinfl=pinfl,
+                account=op.account,
+                amount=op.amount,
+                opening_balance=ctx.config.cards.opening_balance,
+                now=now,
+            )
     if lose_outcome:
         return executed
     return _report(ctx, realm_id, key, EXECUTED) or executed

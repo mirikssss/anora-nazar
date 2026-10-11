@@ -38,7 +38,7 @@ from shared.contracts.facts import BureauReport, CardSpending, CompanyRecord, In
 class FeatureResult:
     vector: FeatureVector
     graph: GroupView
-    signals: dict[str, Value]
+    signals: dict[str, Any]
 
 
 @cache
@@ -138,6 +138,7 @@ def compute(
     as_of: datetime,
     policy: Policy,
     index_key: bytes,
+    stop_kinds: tuple[str, ...] = (),
 ) -> FeatureResult:
     cfg = config()
     subject = subject_key(index_key, snapshot.applicant.pinfl)
@@ -165,5 +166,9 @@ def compute(
     )
     prices = index.comparable_prices(session, realm, application_id, snapshot, levels, as_of)
     parts |= zone3_features(snapshot, facts, prices, roles, as_of, cfg)
-    vector, signals = assemble(point, snapshot, parts, facts)
+    vector, values = assemble(point, snapshot, parts, facts)
+    signals: dict[str, Any] = dict(values)
+    matches = index.stop_listed(session, realm, application_id, list(stop_kinds), as_of) if stop_kinds else []
+    if matches:  # идентификатор из подтверждённого дела — правило продукта «не ниже красного» (Блок 4)
+        signals["confirmed_case_identifier"] = [m.model_dump() for m in matches]
     return FeatureResult(vector=vector, graph=view, signals=signals)

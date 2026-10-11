@@ -16,6 +16,8 @@ from node.modules.policy.domain import Channel, MandatoryCheck, Point, PolicyBun
 from node.modules.policy.reasons import LEVEL_ORDER, Level, Reason, max_level
 from node.modules.scoring.domain import ScoringOutcome
 from shared.contracts.application import ApplicationSnapshot, MandatoryChecks
+from shared.contracts.transfers import RecommendedAction, TransferRecommendationIn
+from shared.errors import ConfigurationError
 
 STOP_BY_NORM = "stop_by_norm"
 
@@ -171,4 +173,52 @@ def decide(inputs: DecisionInputs, bundle: PolicyBundle) -> DecisionResult:
         action=resolve_action(policy, inputs.point, level, leading),
         reasons=reasons,
         valid_until=valid_until,
+    )
+
+
+class TransferInputs(BaseModel):
+    """Входы рекомендации Т3 — собраны до вызова и хранятся в записи решения."""
+
+    model_config = ConfigDict(frozen=True)
+
+    as_of: datetime
+    application_version: int
+    loan_amount: int
+    transfer: TransferRecommendationIn
+    recipient_borrowers: int
+    stop_matches: list[dict[str, Any]]
+
+
+class TransferRecommendation(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    level: Level
+    recommended_action: RecommendedAction
+    reasons: list[Reason]
+
+
+def recommend_transfer(inputs: TransferInputs, bundle: PolicyBundle) -> TransferRecommendation:
+    """Т3: большая доля кредита в первые часы на новую карту, связанную с другими заёмщиками или с делом, —
+    красный и совет удержать до подтверждения; решает транзакционный антифрод банка (ревью A)."""
+    rules = bundle.policy.transfers
+    if rules is None:
+        raise ConfigurationError(f"В политике {bundle.policy.version} нет правил первого перевода")
+    t = inputs.transfer
+    share = round(max(0, t.amount - t.balance_before_credit) / inputs.loan_amount, 4)
+    hours = round((t.requested_at - t.credited_at).total_seconds() / 3600, 2)
+    early_big = share >= rules.credit_share_min and hours <= rules.within_hours
+    linked = inputs.recipient_borrowers >= rules.linked_borrowers_min
+    red = bool(inputs.stop_matches) or (early_big and t.recipient_is_new and linked)
+    level: Level = "red" if red else "yellow" if early_big and t.recipient_is_new else "green"
+    reasons = []
+    if early_big:
+        evidence = {"credit_share": share, "hours_since_credit": hours, "threshold": rules.credit_share_min}
+        reasons.append(bundle.reason("F1_FIRST_TRANSFER_CREDIT_SHARE", [evidence], level))
+    if t.recipient_is_new:
+        evidence = {"recipient_borrowers": inputs.recipient_borrowers, "threshold": rules.linked_borrowers_min}
+        reasons.append(bundle.reason("F1_NEW_RECIPIENT", [evidence], level if early_big else None))
+    if inputs.stop_matches:
+        reasons.append(bundle.reason("PRODUCT_CONFIRMED_CASE_IDENTIFIER", inputs.stop_matches, "red"))
+    return TransferRecommendation(
+        level=level, recommended_action="hold_until_confirmed" if red else "allow", reasons=reasons
     )

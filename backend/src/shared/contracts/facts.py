@@ -91,6 +91,35 @@ class FirstPaymentMissed(_PersonFact):
     application_id: str
 
 
+class IntentAnswer(_Fact):
+    question: str = Field(min_length=1, max_length=64)
+    answer: str = Field(min_length=1, max_length=64)
+
+
+class IntentAnswers(_PersonFact):
+    """Ответы заёмщика на вопросы проверки намерения в приложении банка (жёлтый уровень, Блок 5)."""
+
+    application_id: str
+    answers: list[IntentAnswer] = Field(min_length=1)
+
+
+class PressureReported(_PersonFact):
+    """Кнопка «Меня просят взять кредит» в приложении: сигнал молча, без вопроса «вы уверены?» (Блок 5)."""
+
+    application_id: str
+
+
+class AcceptanceAct(_Fact):
+    """Акт приёмки по программной заявке с платформы программ: кто и когда подписал, сумма счёта (Т5)."""
+
+    act_id: str = Field(min_length=1, max_length=64)
+    application_id: str
+    signer_id: str = Field(min_length=1, max_length=64)
+    signer_role: Literal["helper", "mahalla_banker", "veterinary"]
+    signed_on: date
+    invoice_amount: int = Field(gt=0)
+
+
 FACTS: dict[str, type[_Fact]] = {
     "session.summary": SessionSummary,
     "cards.spending": CardSpending,
@@ -100,4 +129,7 @@ FACTS: dict[str, type[_Fact]] = {
     "incident.recorded": IncidentRecorded,
     "loan.matured": LoanMatured,
     "loan.first_payment_missed": FirstPaymentMissed,
+    "client.intent_answers": IntentAnswers,
+    "client.pressure_reported": PressureReported,
+    "program.acceptance_act": AcceptanceAct,
 }

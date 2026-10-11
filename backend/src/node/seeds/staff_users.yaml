@@ -11,6 +11,12 @@ staff_users:
     display_name: Специалист внутреннего контроля
     division: Служба внутреннего контроля, головной офис
 
+  - code: control-2
+    role: internal_control
+    display_name: Специалист внутреннего контроля филиала
+    division: Служба внутреннего контроля, филиал 2
+    branch_id: BR-02             # не ведёт дела своего филиала (Блок 4, ограничения ролей)
+
   - code: risk-1
     role: risk_manager
     display_name: Риск-менеджер

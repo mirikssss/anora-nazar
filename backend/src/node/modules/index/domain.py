@@ -6,6 +6,7 @@ import math
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -135,6 +136,7 @@ class GroupView(BaseModel):
     shared_roles: list[SharedRole]
     coordination: list[CoordinationSignal] = Field(default_factory=list)
     member_subjects: tuple[str, ...] = Field(default=(), exclude=True)
+    member_applications: tuple[UUID, ...] = Field(default=(), exclude=True)  # группа и когорта роли — для дела
 
 
 class RoleConcentrations(BaseModel):
@@ -210,3 +212,41 @@ def coordination_signal(
         ratio=ratio,
         flagged=recent >= policy.min_applications and ratio >= policy.min_ratio_to_pace,
     )
+
+
+EDGE_TYPES = {  # тип связи в графе дела (Блок 5): общий идентификатор, рекомендация, договор и оплата
+    "phone": "shared_identifier",
+    "device": "shared_identifier",
+    "address": "shared_identifier",
+    "employer": "shared_identifier",
+    "helper": "recommendation",
+    "supplier": "contract_payment",
+    "employee": "processed_by",
+    "card": "transfer",
+}
+
+
+class GraphNode(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    type: str
+    display: str
+    application_id: str | None = None  # внутренний id заявки — у узлов-заявок
+
+
+class GraphEdge(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    source: str
+    target: str
+    type: str
+    rare: bool
+
+
+class StopMatch(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    kind: str
+    display: str
+    case_id: str

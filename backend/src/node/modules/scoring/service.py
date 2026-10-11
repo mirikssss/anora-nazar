@@ -23,7 +23,7 @@ from node.modules.scoring.domain import (
     feature_row,
     top_contributions,
 )
-from node.modules.scoring.models import ModelVersion
+from node.modules.scoring.models import ModelRelease, ModelVersion
 from node.modules.scoring.predictors import Predictor
 
 
@@ -55,10 +55,10 @@ def active_versions(session: Session, realm: RealmContext) -> dict[str, ModelVer
     return {name: versions[vid] for name, (_own, vid) in chosen.items()}
 
 
-def shadow_versions(session: Session, active: dict[str, ModelVersion]) -> list[ModelVersion]:
+def shadow_versions(session: Session, realm: RealmContext, active: dict[str, ModelVersion]) -> list[ModelVersion]:
     """Тень — самая новая версия каждой модели, обученная после действующей и ещё не выпущенная."""
     latest: dict[str, ModelVersion] = {}
-    for version in repository.all_versions(session):
+    for version in repository.all_versions(session, realm.visible_ids):
         current = active.get(version.name)
         if version.name in latest or (current is not None and version.created_at <= current.created_at):
             continue
@@ -111,7 +111,7 @@ def evaluate(
     top = policy.top_contributions
     scores = [score(cache, v, vector, top) for v in sorted(compatible, key=lambda v: v.name)]
     missing = _missing(policy, vector, scores)
-    shadow = [score(cache, v, vector, top) for v in shadow_versions(session, active) if fits(v)]
+    shadow = [score(cache, v, vector, top) for v in shadow_versions(session, realm, active) if fits(v)]
     return ScoringOutcome(
         status="scored",
         reason="partial" if missing else None,
@@ -147,8 +147,12 @@ def rescore(
 def versions_with_status(session: Session, realm: RealmContext) -> list[tuple[ModelVersion, str]]:
     active = active_versions(session, realm)
     active_ids = {v.id for v in active.values()}
-    shadow_ids = {v.id for v in shadow_versions(session, active)}
+    shadow_ids = {v.id for v in shadow_versions(session, realm, active)}
     return [
         (v, "active" if v.id in active_ids else "shadow" if v.id in shadow_ids else "retired")
-        for v in repository.all_versions(session)
+        for v in repository.all_versions(session, realm.visible_ids)
     ]
+
+
+def pending_releases(session: Session, realm: RealmContext) -> list[ModelRelease]:
+    return repository.pending_releases(session, realm.id)

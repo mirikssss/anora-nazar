@@ -38,6 +38,16 @@ class NodeGateway:
             "POST", "/v1/permits/outcomes", realm_id=realm_id, json={"operation_key": operation_key, "status": status}
         )
 
+    def recommend_transfer(self, realm_id: UUID, body: dict[str, Any], key: str) -> dict[str, Any]:
+        """Т3: рекомендация транзакционному антифроду банка по первому переводу кредитных денег (ревью A)."""
+        return self.core_banking.call(
+            "POST", "/v1/transfers/recommendations", realm_id=realm_id, json=body, idempotency_key=key
+        )
+
+    def verification_questions(self) -> dict[str, Any]:
+        """Вопросы проверки намерения — публичный справочник узла; тексты по кодам рисует интерфейс."""
+        return self.conveyor.call("GET", "/v1/verification/questions")
+
     def send_event(self, realm_id: UUID, envelope: dict[str, Any]) -> dict[str, Any]:
         return self.events.call("POST", "/v1/events", realm_id=realm_id, json=envelope)
 

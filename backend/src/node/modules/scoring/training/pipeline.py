@@ -52,13 +52,14 @@ def run(
 ) -> TrainingResult:
     if cfg.feature_set != features.config().version:
         raise ConfigurationError(f"Обучение настроено на {cfg.feature_set}, а узел считает {features.config().version}")
-    cutoff = labels.latest_received(session, realm.id) or now
+    cutoff = labels.latest_received(session, realm.visible_ids) or now
     examples = dataset.build(session, realm, cutoff, policy, index_key)
     versions, summaries = [], []
     for spec in specs(cfg):
         version, summary = train_spec(examples, spec, cfg, cutoff, now, features.config().timezone)
         summaries.append(summary)
         if version is not None:
+            version.realm_id = None if not realm.is_sandbox else realm.id
             repository.add(session, version)
             versions.append(version)
     timing = point_in_time.check(session, realm, policy, index_key, cfg.point_in_time_sample, cfg.seed)
