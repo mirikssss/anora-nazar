@@ -33,6 +33,7 @@ KEYS = {
     "events": "test-events",
     "realms": "test-realms",
     "history": "test-history",
+    "network": "test-network",
 }
 START = datetime(2026, 10, 11, 9, 0, tzinfo=UTC)
 
@@ -226,6 +227,7 @@ def node(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Node]:
         bank_sim_api_key="k",
         anchor_url="http://anchor",
         anchor_api_key="k",
+        demo_mode=True,
     )
     upgrade(MIGRATIONS, url)
     clock, bank, anchor = FixedClock(START), FakeBank(), FakeAnchor()

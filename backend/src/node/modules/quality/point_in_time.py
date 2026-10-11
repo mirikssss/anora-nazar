@@ -10,6 +10,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from node.modules.consortium.domain import NetworkObservation
 from node.modules.decisions import service as decisions
 from node.modules.features import service as features
 from node.modules.features.domain import FEATURE_SET_VERSION, Point
@@ -53,8 +54,10 @@ def check(
         stored = inputs["features"]["values"]
         snapshot = ApplicationSnapshot.model_validate(inputs["snapshot"])
         point: Point = "T1" if decision.point == "T1" else "T4"
+        # ответ сети — внешний вход, как снимок: хранится в записи и подставляется как есть
+        network = NetworkObservation.model_validate(inputs["network"]) if inputs.get("network") else None
         fresh = features.compute(
-            session, realm, decision.application_id, point, snapshot, decision.as_of, policy, index_key
+            session, realm, decision.application_id, point, snapshot, decision.as_of, policy, index_key, (), network
         ).vector.values
         diff = {name: (stored.get(name), fresh.get(name)) for name in fresh if stored.get(name) != fresh.get(name)}
         if not diff:

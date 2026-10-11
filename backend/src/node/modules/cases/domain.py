@@ -29,9 +29,12 @@ class Deadlines(_Frozen):
 
 
 class OutcomeRule(_Frozen):
+    """network — что уходит в сеть кредиторов (Блок 4): идентификаторы мошенника или только карта-получатель."""
+
     application: Literal["refuse", "cancel", "keep_hold", "release"]
     stop_list: bool
     label: Literal["positive", "strong_negative"] | None
+    network: Literal["fraudster_identifiers", "recipient_card"] | None = None
 
 
 class PayrollRule(_Frozen):

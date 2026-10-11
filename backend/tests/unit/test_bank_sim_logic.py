@@ -10,17 +10,20 @@ import pytest
 
 from bank_sim.modules.borrower_app.domain import BorrowerState, Notice, check_answers, reason_codes, screen
 from bank_sim.modules.conveyor.schemas import ApplicationDraft
+from bank_sim.modules.lenders.domain import LenderApplication
 from bank_sim.modules.personas.service import load_borrowers
 from bank_sim.modules.scenarios.domain import (
     ApplicationStep,
     BranchRef,
     HelperRef,
     ItemRef,
+    LenderStep,
     ScenarioBook,
     ScenarioError,
     WorldRefs,
     application_drafts,
     cast,
+    lender_applications,
     run_seed,
 )
 from bank_sim.modules.sources.domain import InpsProfile, inps_contributions, months_before
@@ -173,6 +176,7 @@ REFS = WorldRefs(
     operator_codes=("90", "93"),
     pinfl_district_codes=CONFIG.scenarios.pinfl_district_codes,
     house_numbers=CONFIG.scenarios.house_numbers,
+    card_prefixes=tuple(CONFIG.scenarios.card_prefixes),
 )
 
 
@@ -216,3 +220,30 @@ def test_program_scenario_needs_loaded_world() -> None:
     with pytest.raises(ScenarioError):
         _drafts(book, "zone3_overpriced_livestock", "seed", empty)
     assert len(_drafts(book, "zone1_pressure", "seed", empty)) == 1, "онлайн-сценарий работает и без мира"
+
+
+def test_network_scenarios_share_identifiers_only_through_other_lenders() -> None:
+    book = ScenarioBook.model_validate(load_yaml(SEEDS / "scenarios.yaml"))
+    realm, now = uuid4(), datetime(2026, 10, 11, 12, 0, tzinfo=UTC)
+
+    def elsewhere(code: str) -> tuple[list[LenderApplication], list[ApplicationDraft]]:
+        spec = book.find(code)
+        assert spec is not None
+        crew = cast(spec, REFS, Random(run_seed(realm, 1)))
+        apps = [
+            app
+            for number, step in enumerate(spec.steps, start=1)
+            if isinstance(step, LenderStep)
+            for app in lender_applications(step, crew, now, realm, number)
+        ]
+        return apps, _drafts(book, code, run_seed(realm, 1))
+
+    others, (client,) = elsewhere("network_links_elsewhere")
+    assert {a.phone for a in others} == {client.applicant.phone} and len({a.device_id for a in others}) == 1
+    assert client.applicant.pinfl not in {a.pinfl for a in others} and len({a.pinfl for a in others}) == 2
+    series, (same,) = elsewhere("network_pinfl_series")
+    assert {a.pinfl for a in series} == {same.applicant.pinfl} and min(a.occurred_at for a in series) > now - timedelta(
+        hours=1
+    )
+    cards, _ = elsewhere("network_card_transfer")
+    assert len({a.transfer.card for a in cards if a.transfer}) == 1 and all(a.issued_at for a in cards)

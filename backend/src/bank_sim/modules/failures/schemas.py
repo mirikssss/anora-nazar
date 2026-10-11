@@ -9,12 +9,16 @@ class Flags(BaseModel):
     lose_outcome: bool = Field(description="АБС проводит операцию, но итог в узел не доходит")
     node_unavailable: bool = Field(description="Узел недоступен: заявки ждут, деньги не двигаются")
     queue_lag: bool = Field(description="Очередь событий в узел стоит")
+    network_unavailable: bool = Field(
+        default=False, description="Сеть кредиторов недоступна: оператор отвечает отказом на запросы этой песочницы"
+    )
 
 
 class FlagsPatch(BaseModel):
     lose_outcome: bool | None = None
     node_unavailable: bool | None = None
     queue_lag: bool | None = None
+    network_unavailable: bool | None = None
 
 
 class RepeatIn(BaseModel):

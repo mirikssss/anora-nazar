@@ -1,5 +1,7 @@
-"""Песочницы: создание вместе с контуром узла, сброс, удаление брошенных."""
+"""Песочницы: создание вместе с контуром узла, сброс, удаление брошенных; контур у оператора сети удаляется
+вместе с песочницей."""
 
+import logging
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -7,7 +9,10 @@ from sqlalchemy.orm import Session
 
 from bank_sim.modules.sandboxes import repository
 from bank_sim.modules.sandboxes.models import Sandbox
-from shared.errors import NotFoundError
+from bank_sim.network_gateway import NetworkGateway
+from shared.errors import AppError, ConfigurationError, NotFoundError
+
+log = logging.getLogger(__name__)
 
 
 def add(session: Session, sandbox_id: UUID, now: datetime) -> None:
@@ -30,3 +35,14 @@ def inactive(session: Session, now: datetime, ttl: timedelta) -> list[UUID]:
 
 def all_ids(session: Session) -> list[UUID]:
     return repository.all_ids(session)
+
+
+def forget_in_network(network: NetworkGateway | None, realm_id: UUID) -> None:
+    """События, результаты и подписки песочницы у оператора сети. Сбой оператора сброс не останавливает: контур
+    песочницы — случайный идентификатор, его данные никому больше не видны."""
+    if network is None:
+        return
+    try:
+        network.delete_realm(realm_id)
+    except (AppError, ConfigurationError) as exc:
+        log.warning("контур песочницы %s у оператора сети не удалён: %s", realm_id, exc)

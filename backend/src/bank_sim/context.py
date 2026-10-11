@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from bank_sim.network_gateway import NetworkGateway
 from bank_sim.node_gateway import NodeGateway
 from bank_sim.settings import BankConfig, BankEnv
 from shared.clock import Clock
@@ -17,3 +18,4 @@ class BankContext:
     clock: Clock
     node: NodeGateway
     node_verifier: Verifier
+    network: NetworkGateway | None  # кредиторы Б и В и служебный ключ стенда у оператора сети; None — сеть не настроена

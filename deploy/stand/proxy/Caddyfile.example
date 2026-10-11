@@ -1,0 +1,7 @@
+# Caddy на хосте: добавить блок в существующий Caddyfile и выполнить `caddy reload`.
+# Сертификат Let's Encrypt Caddy получает сам; A-запись nazar.clusteros.co.uz → 49.13.148.21 нужна заранее.
+# Порт — STAND_PORT из deploy/stand/.env.
+nazar.clusteros.co.uz {
+	encode gzip
+	reverse_proxy 127.0.0.1:18480
+}

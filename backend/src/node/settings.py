@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from node.modules.risk.domain import RiskConfig
@@ -22,7 +22,13 @@ class NodeEnv(BaseSettings):
     bank_sim_api_key: str
     anchor_url: str
     anchor_api_key: str
+    network_url: str | None = None  # оператор сети кредиторов; не задан — сеть всегда «недоступна»
+    network_api_key: str | None = None
+    network_history_key: str | None = None
     log_level: str = "INFO"
+    app_version: str | None = Field(default=None, validation_alias="APP_VERSION")  # коммит сборки, из образа
+    demo_mode: bool = False  # вход без пароля — только в демо-режиме стенда (CLAUDE.md, «Роли и страницы»)
+    training_in_process: bool = True  # False — обучение в отдельном процессе `python -m node trainer` (стенд)
     config_path: Path = PACKAGE_DIR / "config" / "node.yaml"
     policy_dir: Path = PACKAGE_DIR / "modules" / "policy" / "rules"
     seeds_dir: Path = PACKAGE_DIR / "seeds"
@@ -79,6 +85,10 @@ class HttpConfig(_Frozen):
     timeout_seconds: float
 
 
+class NetworkClientConfig(_Frozen):
+    timeout_seconds: float
+
+
 class DatabaseConfig(_Frozen):
     pool_size: int
 
@@ -105,6 +115,7 @@ class NodeConfig(_Frozen):
     texts: TextsConfig
     risk: RiskConfig
     http: HttpConfig
+    network: NetworkClientConfig
     database: DatabaseConfig
 
 

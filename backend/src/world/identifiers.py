@@ -1,4 +1,4 @@
-"""Форматы идентификаторов мира: ПИНФЛ, телефон, устройство, счёт, ИНН. Все значения уникальны в мире."""
+"""Форматы идентификаторов мира: ПИНФЛ, телефон, устройство, счёт, ИНН, карта. Все значения уникальны в мире."""
 
 from datetime import date
 from random import Random
@@ -17,11 +17,21 @@ LEGAL_INN_FIRST_DIGITS = ("2", "3")  # ИНН юрлица — 9 цифр, на�
 LEGAL_INN_TAIL_SPACE = 10**8
 DEVICE_ID_BITS = 64
 YEARS_PER_CENTURY = 100
+CARD_LENGTH = 16  # номер карты — 16 цифр, последняя — контрольная по алгоритму Луна
 
 
 def pinfl_check_digit(body: str) -> str:
     total = sum(int(digit) * PINFL_CHECK_WEIGHTS[i % len(PINFL_CHECK_WEIGHTS)] for i, digit in enumerate(body))
     return str(total % 10)
+
+
+def luhn_check_digit(body: str) -> str:
+    """Контрольная цифра Луна: каждая вторая цифра справа, начиная с последней цифры тела, удваивается."""
+    total = 0
+    for index, digit in enumerate(reversed(body)):
+        value = int(digit) * (2 if index % 2 == 0 else 1)
+        total += value - 9 if value > 9 else value
+    return str(-total % 10)
 
 
 class Identifiers:
@@ -65,6 +75,16 @@ class Identifiers:
     def account(self) -> str:
         while True:
             candidate = f"{self._rng.randrange(ACCOUNT_SPACE):020d}"
+            if self._unique(candidate):
+                return candidate
+
+    def card(self, prefixes: list[str]) -> str:
+        """Номер карты: префикс платёжной системы, случайные цифры и контрольная цифра Луна."""
+        while True:
+            prefix = pick(self._rng, prefixes)
+            digits = CARD_LENGTH - len(prefix) - 1
+            body = f"{prefix}{self._rng.randrange(10**digits):0{digits}d}"
+            candidate = body + luhn_check_digit(body)
             if self._unique(candidate):
                 return candidate
 

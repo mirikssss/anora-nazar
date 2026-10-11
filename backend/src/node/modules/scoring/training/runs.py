@@ -10,6 +10,7 @@ from uuid import uuid4
 from sqlalchemy.orm import Session
 
 from node.modules.audit import service as audit
+from node.modules.consortium.service import NetworkContext
 from node.modules.policy.domain import Policy
 from node.modules.realms import service as realms
 from node.modules.realms.domain import RealmContext
@@ -44,7 +45,14 @@ def runs(session: Session, realm: RealmContext) -> list[TrainingRun]:
     return repository.runs(session, realm.id)
 
 
-def process_next(db: Database, cfg: TrainingConfig, policy: Policy, index_key: bytes, now: datetime) -> bool:
+def process_next(
+    db: Database,
+    cfg: TrainingConfig,
+    policy: Policy,
+    index_key: bytes,
+    now: datetime,
+    network: NetworkContext | None = None,
+) -> bool:
     """Один запуск из очереди. Обучение — в своей транзакции; ошибка записывается в запуск, а не теряется."""
     with db.transaction() as session:
         run = repository.next_queued_run(session)
@@ -55,7 +63,7 @@ def process_next(db: Database, cfg: TrainingConfig, policy: Policy, index_key: b
     try:
         with db.transaction() as session:
             realm = realms.resolve(session, realm_id, now)
-            result = pipeline.run(session, realm, cfg, policy, index_key, now)
+            result = pipeline.run(session, realm, cfg, policy, index_key, now, network)
             run = session.get(TrainingRun, run_id)
             assert run is not None
             run.status, run.finished_at = "done", now

@@ -19,6 +19,7 @@ from shared.contracts.facts import (
     InpsContributions,
     LoanMatured,
 )
+from shared.contracts.network import Confirmation
 from world.config import TypologyOutcome, WorldParams
 from world.plans import ApplicationPlan
 from world.records import Channel, Typology
@@ -27,7 +28,7 @@ from world.sink import HistorySink
 from world.sources import CORE_BANKING, INCIDENTS, INPS, Source
 
 CHANNEL_TYPOLOGIES: dict[Channel, tuple[Typology, ...]] = {"online": ("F1", "F2"), "program": ("F2", "F3")}
-CONFIRMED: dict[Typology, IncidentResult] = {
+CONFIRMED: dict[Typology, Confirmation] = {
     "F1": "confirmed_coercion",
     "F2": "confirmed_fraud",
     "F3": "confirmed_fraud",

@@ -8,6 +8,7 @@ from fastapi import FastAPI
 
 from bank_sim.background import BankTasks
 from bank_sim.context import BankContext
+from bank_sim.network_gateway import NetworkGateway
 from bank_sim.node_gateway import NodeGateway
 from bank_sim.routes import include_routers
 from bank_sim.settings import BankEnv, load_config
@@ -18,7 +19,12 @@ from shared.errors import install_error_handlers
 from shared.logging import configure_logging
 
 
-def build_context(env: BankEnv, clock: Clock, node_transport: httpx.BaseTransport | None = None) -> BankContext:
+def build_context(
+    env: BankEnv,
+    clock: Clock,
+    node_transport: httpx.BaseTransport | None = None,
+    network_transport: httpx.BaseTransport | None = None,
+) -> BankContext:
     config = load_config(env.config_path)
     return BankContext(
         env=env,
@@ -27,6 +33,7 @@ def build_context(env: BankEnv, clock: Clock, node_transport: httpx.BaseTranspor
         clock=clock,
         node=NodeGateway(env, config.http.timeout_seconds, node_transport),
         node_verifier=read_public_key(env.node_public_key_path),
+        network=NetworkGateway.from_env(env, config.http.timeout_seconds, network_transport),
     )
 
 
@@ -42,6 +49,8 @@ def create_app(ctx: BankContext, *, run_background: bool) -> FastAPI:
             if loop is not None:
                 loop.stop()
             ctx.node.close()
+            if ctx.network is not None:
+                ctx.network.close()
             ctx.db.dispose()
 
     app = FastAPI(title="Anora Nazar · имитатор банка", version="1.0", lifespan=lifespan)

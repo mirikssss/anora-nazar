@@ -38,6 +38,12 @@ class ValidationFailedError(AppError):
     status_code = 422
 
 
+class TooManyRequestsError(AppError):
+    """Превышен лимит запросов клиента за окно."""
+
+    status_code = 429
+
+
 class UpstreamUnavailableError(AppError):
     """Другой сервис не ответил: операция ждёт, а не проходит молча."""
 

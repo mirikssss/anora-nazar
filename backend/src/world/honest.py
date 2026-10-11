@@ -2,6 +2,8 @@
 волны зарплатных проектов и обычные программные партии.
 """
 
+from datetime import date
+
 from world.plans import ApplicationPlan, PlanFactory, ProgramRoles
 from world.records import Channel
 from world.sampling import between, pick, scaled
@@ -54,9 +56,9 @@ def plan_program_batches(factory: PlanFactory, target: int) -> list[ApplicationP
     return plans
 
 
-def _single(factory: PlanFactory, channel: Channel, month: int) -> ApplicationPlan:
+def honest_application(factory: PlanFactory, channel: Channel, first_day: date, days: int) -> ApplicationPlan:
+    """Одиночная честная заявка в окне; у программной — ловушки молодого поставщика и высокой цены."""
     rng = factory.rng
-    first_day, days = factory.calendar.month_window(month)
     person = factory.population.random(rng)
     signals = factory.honest_signals()
     if channel == "online":
@@ -69,7 +71,7 @@ def _single(factory: PlanFactory, channel: Channel, month: int) -> ApplicationPl
 def plan_singles(factory: PlanFactory, missing: dict[Channel, list[int]]) -> list[ApplicationPlan]:
     """Одиночные честные заявки добирают месячную квоту канала до параметра объёма."""
     return [
-        _single(factory, channel, month)
+        honest_application(factory, channel, *factory.calendar.month_window(month))
         for channel, per_month in missing.items()
         for month, count in enumerate(per_month)
         for _ in range(count)

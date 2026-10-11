@@ -10,7 +10,8 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validat
 
 from shared.contracts.facts import IncidentKind
 
-DEFAULT_PARAMS_PATH = Path(__file__).parent / "params" / "world-v1.yaml"
+PARAMS_DIR = Path(__file__).parent / "params"
+DEFAULT_PARAMS_PATH = PARAMS_DIR / "world-v1.yaml"
 
 IdentityKind = Literal["phone", "device", "address"]
 HOURS_PER_DAY = 24
@@ -25,6 +26,7 @@ def _ordered[T: float](bounds: tuple[T, T]) -> tuple[T, T]:
 IntRange = Annotated[tuple[int, int], AfterValidator(_ordered)]
 FloatRange = Annotated[tuple[float, float], AfterValidator(_ordered)]
 Probability = Annotated[float, Field(ge=0, le=1)]
+ShareRange = Annotated[tuple[Probability, Probability], AfterValidator(_ordered)]
 Count = Annotated[int, Field(ge=0)]
 Positive = Annotated[int, Field(ge=1)]
 
@@ -221,11 +223,33 @@ class PremiumPrice(_Params):
     markup: LogNormal
 
 
+class ComparisonShopping(_Params):
+    """Честный человек подаёт заявку ещё в один банк, сравнивая условия."""
+
+    share: Probability  # доля честных онлайн-заявок кредитора узла
+    same_hour_share: Probability  # из них вторая заявка — рядом по времени
+    same_hour_minutes: Positive
+    later_days: IntRange  # остальные — через столько дней, в любую сторону
+
+
+class FamilyElsewhere(_Params):
+    """Член семьи с общим телефоном или планшетом подаёт заявку у другого кредитора."""
+
+    share: Probability  # доля честных заявок кредитора узла от людей из таких семей
+    window_days: Positive
+
+
+class HonestCrossLender(_Params):
+    comparison: ComparisonShopping
+    family: FamilyElsewhere
+
+
 class Honest(SignalProbabilities):
     income_jump: Probability
     first_payment_missed: Probability
     premium_price: PremiumPrice
     young_supplier_share: Probability
+    cross_lender: HonestCrossLender | None = None  # ловушки сети кредиторов (world-v2)
 
 
 class CoercionParams(SignalProbabilities):
@@ -259,10 +283,30 @@ class ProgramSchemeParams(_Params):
     scheme_size: IntRange
 
 
+class CrossLenderFraud(_Params):
+    """Межбанковые схемы: участники одной схемы подают заявки у разных кредиторов."""
+
+    f2_rings: Annotated[float, Field(ge=0, lt=1)]  # доля межбанковых среди колец F2 с общими идентификаторами
+    f2_node_members: IntRange  # участников такого кольца у кредитора узла
+    f1_series: Probability  # доля жертв F1, от имени которых подают заявки и у других кредиторов
+    f1_series_lenders: IntRange  # у скольких других кредиторов
+    f1_series_minutes: Positive  # окно серии вокруг заявки у кредитора узла
+    f3_schemes: Probability  # доля схем F3, поставщик которых получает заёмщиков и у других кредиторов
+    f3_other_borrowers: IntRange
+    f3_window_days: Positive
+
+    @model_validator(mode="after")
+    def _at_least_one(self) -> Self:
+        if self.f2_node_members[0] < 1 or self.f1_series_lenders[0] < 1:
+            raise ValueError("У кредитора узла и в серии F1 — хотя бы по одной заявке")
+        return self
+
+
 class Fraud(_Params):
     f1: CoercionParams
     f2: NetworkParams
     f3: ProgramSchemeParams
+    cross_lender: CrossLenderFraud | None = None  # межбанковые схемы (world-v2)
 
 
 class ObservationDays(_Params):
@@ -270,9 +314,14 @@ class ObservationDays(_Params):
     program: Positive
 
 
-class TypologyOutcome(_Params):
+class Detection(_Params):
+    """Доля раскрытых схем и задержка подтверждения после последней заявки схемы."""
+
     detected: Probability
     delay_days: IntRange
+
+
+class TypologyOutcome(Detection):
     kinds: dict[IncidentKind, float] = Field(min_length=1)
 
 
@@ -291,6 +340,41 @@ class Outcomes(_Params):
     inps_correction_share: Probability
     inps_correction_delay_days: IntRange
     inps_correction_factor: FloatRange
+
+
+class IssueDelay(_Params):
+    """Минут от заявки до выдачи по каналам."""
+
+    online: IntRange
+    program: IntRange
+
+
+class TransferProfile(_Params):
+    """Первый перевод кредитных денег на карту после выдачи онлайн-кредита."""
+
+    share: Probability
+    credit_share: ShareRange
+    delay_minutes: IntRange
+
+
+class OtherLenderTransfers(_Params):
+    honest: TransferProfile
+    fraud: TransferProfile
+
+
+class OtherLenderConfirmations(_Params):
+    f2: Detection
+    f3: Detection
+
+
+class OtherLenders(_Params):
+    """Исполнение у кредиторов, кроме узла: выдача, первый перевод, результаты дел (world-v2)."""
+
+    card_prefixes: list[Annotated[str, Field(pattern=r"^\d{4,8}$")]] = Field(min_length=1)
+    bureau_block_hours: Positive
+    issue_delay_minutes: IssueDelay
+    transfers: OtherLenderTransfers
+    confirmations: OtherLenderConfirmations
 
 
 class Naming(_Params):
@@ -315,6 +399,7 @@ class WorldParams(_Params):
     population: Population
     organizations: Organizations
     lenders: list[Lender] = Field(min_length=1)
+    other_lenders: OtherLenders | None = None
     applications: Applications
     session: SessionParams
     bureau: BureauParams
@@ -337,6 +422,9 @@ class WorldParams(_Params):
             raise ValueError("Кредитор узла не найден среди кредиторов")
         if self.fraud.f2.coordination_shared_roles[0] < 1:
             raise ValueError("У координационного кольца хотя бы одна общая роль")
+        cross = self.fraud.cross_lender is not None or self.honest.cross_lender is not None
+        if cross and (self.other_lenders is None or len(codes) < 2):
+            raise ValueError("Межбанковым схемам и ловушкам нужны другие кредиторы и раздел other_lenders")
         return self
 
     @property

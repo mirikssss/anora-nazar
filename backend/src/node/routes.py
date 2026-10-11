@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from node.modules.applications.api import router as applications
 from node.modules.audit.api import router as audit
 from node.modules.cases.api import router as cases
+from node.modules.consortium.api import router as consortium
 from node.modules.decisions.api import router as decisions
 from node.modules.history.api import router as history
 from node.modules.identity.api import router as identity
@@ -38,5 +39,6 @@ def include_routers(app: FastAPI) -> None:
         verification,
         policy,
         risk,
+        consortium,
     ):
         app.include_router(router)

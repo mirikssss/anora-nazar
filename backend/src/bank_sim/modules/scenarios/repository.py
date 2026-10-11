@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from bank_sim.modules.scenarios.models import ScenarioRun
@@ -28,3 +28,7 @@ def list_for_realm(session: Session, realm_id: UUID) -> list[ScenarioRun]:
     return list(
         session.scalars(select(ScenarioRun).where(ScenarioRun.realm_id == realm_id).order_by(ScenarioRun.number.desc()))
     )
+
+
+def remove(session: Session, realm_id: UUID, run_id: UUID) -> None:
+    session.execute(delete(ScenarioRun).where(ScenarioRun.realm_id == realm_id, ScenarioRun.id == run_id))

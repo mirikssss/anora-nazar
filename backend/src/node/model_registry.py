@@ -4,6 +4,7 @@ from node.database import Base
 from node.modules.applications import models as applications
 from node.modules.audit import models as audit
 from node.modules.cases import models as cases
+from node.modules.consortium import models as consortium
 from node.modules.decisions import models as decisions
 from node.modules.identity import models as identity
 from node.modules.index import models as index
@@ -32,6 +33,7 @@ MODEL_MODULES = (
     quality,
     cases,
     policy,
+    consortium,
 )
 metadata = Base.metadata
 IDEMPOTENCY = idempotency_table(metadata, "realms")

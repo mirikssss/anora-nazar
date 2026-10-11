@@ -8,7 +8,7 @@ from node.deps import Ctx, PublicRealm, get_principal
 from node.modules.identity import service
 from node.modules.identity.domain import Principal, StaffPrincipal
 from node.modules.identity.schemas import DemoLoginIn, DemoLoginOut, MeOut, StaffRoleOut, StaffUserOut
-from shared.errors import ForbiddenError
+from shared.errors import ForbiddenError, NotFoundError
 
 router = APIRouter(prefix="/v1", tags=["Сотрудники и вход"])
 
@@ -42,6 +42,10 @@ def list_roles(ctx: Ctx) -> list[StaffRoleOut]:
 
 @router.post("/auth/demo-login", response_model=DemoLoginOut)
 def demo_login(body: DemoLoginIn, ctx: Ctx, realm: PublicRealm) -> DemoLoginOut:
+    if not ctx.env.demo_mode:
+        raise NotFoundError("demo_login_disabled", "Вход без пароля есть только на демо-стенде")
+    if not realm.is_sandbox:
+        raise ForbiddenError("sandbox_required", "Демо-вход — только в своей песочнице: общий мир посетители не меняют")
     with ctx.db.transaction() as session:
         token, principal = service.demo_login(session, body.user_code, realm.id, ctx.env.session_secret)
     return DemoLoginOut(token=token, me=_me(principal))

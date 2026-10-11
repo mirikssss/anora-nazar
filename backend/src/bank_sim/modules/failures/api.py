@@ -18,6 +18,8 @@ def get_flags(ctx: Ctx, realm: Realm) -> Flags:
 
 @router.patch("", response_model=Flags)
 def set_flags(body: FlagsPatch, ctx: Ctx, realm: Realm) -> Flags:
+    if body.network_unavailable is not None:
+        service.switch_network(ctx.network, realm, body.network_unavailable)
     with ctx.db.transaction() as session:
         return service.update(session, realm, body, ctx.clock.now())
 

@@ -1,0 +1,280 @@
+# Публичный демо-стенд на сервере (Hetzner 49.13.148.21, общий с дев-стендом ClusterOS). Порядок — README.md рядом.
+# Отдельный проект anora-nazar: своя сеть, свой PostgreSQL, лимиты; с контейнерами ClusterOS ничего общего.
+# Наружу — только шлюз на ${STAND_BIND}:${STAND_PORT}; TLS и сабдомен ${STAND_DOMAIN} держит reverse proxy сервера.
+# Локально не запускать без -p: имя проекта совпадает со стендом разработки и заберёт его тома.
+# Значения ресурсов помечены «предложено»: сервер общий, размер машины уточняется на месте.
+name: anora-nazar
+
+x-logging: &logging
+  driver: json-file
+  options: {max-size: "10m", max-file: "5"}   # предложено: до 50 МБ логов на контейнер
+
+x-health: &health
+  interval: 10s
+  timeout: 3s
+  retries: 5
+  start_period: 120s   # миграции и сиды при старте
+
+x-backend: &backend
+  build:
+    context: ../../backend
+    target: runtime
+    args:
+      GIT_SHA: ${GIT_SHA:?}
+  image: anora-nazar-backend:${GIT_SHA:?}
+  restart: unless-stopped
+  logging: *logging
+  networks: [backend]
+
+x-node-env: &node-env
+  NODE_DATABASE_URL: postgresql+psycopg://nazar:${POSTGRES_PASSWORD:?}@postgres:5432/node
+  NODE_SIGNING_KEY_PATH: /keys/private/node-signing.key
+  NODE_SESSION_SECRET: ${NODE_SESSION_SECRET:?}
+  NODE_INDEX_KEY: ${NODE_INDEX_KEY:?}
+  NODE_BANK_SIM_URL: http://bank-sim:8001
+  NODE_BANK_SIM_API_KEY: ${BANK_SIM_API_KEY_NODE:?}
+  NODE_ANCHOR_URL: http://anchor:8002
+  NODE_ANCHOR_API_KEY: ${ANCHOR_API_KEY_NODE:?}
+  NODE_API_KEY_CONVEYOR: ${NODE_API_KEY_CONVEYOR:?}
+  NODE_API_KEY_CORE_BANKING: ${NODE_API_KEY_CORE_BANKING:?}
+  NODE_API_KEY_EVENTS: ${NODE_API_KEY_EVENTS:?}
+  NODE_API_KEY_REALMS: ${NODE_API_KEY_REALMS:?}
+  NODE_API_KEY_HISTORY: ${NODE_API_KEY_HISTORY:?}
+  NODE_NETWORK_URL: http://network-operator:8003
+  NODE_NETWORK_API_KEY: ${OPERATOR_API_KEY_A:?}
+  NODE_NETWORK_HISTORY_KEY: ${OPERATOR_API_KEY_A_HISTORY:?}
+  NODE_API_KEY_NETWORK: ${OPERATOR_CALLBACK_KEY_A:?}
+  NODE_DEMO_MODE: "true"            # публичный демо-стенд: вход в роли без пароля, только в своей песочнице
+  NODE_TRAINING_IN_PROCESS: "false" # обучение — в сервисе trainer со своим лимитом CPU
+
+x-bank-env: &bank-env
+  BANK_SIM_DATABASE_URL: postgresql+psycopg://nazar:${POSTGRES_PASSWORD:?}@postgres:5432/bank_sim
+  BANK_SIM_NODE_URL: http://node:8000
+  BANK_SIM_NODE_KEY_CONVEYOR: ${NODE_API_KEY_CONVEYOR:?}
+  BANK_SIM_NODE_KEY_CORE_BANKING: ${NODE_API_KEY_CORE_BANKING:?}
+  BANK_SIM_NODE_KEY_EVENTS: ${NODE_API_KEY_EVENTS:?}
+  BANK_SIM_NODE_KEY_REALMS: ${NODE_API_KEY_REALMS:?}
+  BANK_SIM_NODE_PUBLIC_KEY_PATH: /keys/public/node-public.key
+  BANK_SIM_API_KEY_NODE: ${BANK_SIM_API_KEY_NODE:?}
+  BANK_SIM_NETWORK_URL: http://network-operator:8003
+  BANK_SIM_NETWORK_KEY_B: ${OPERATOR_API_KEY_B:?}
+  BANK_SIM_NETWORK_KEY_C: ${OPERATOR_API_KEY_C:?}
+  BANK_SIM_NETWORK_KEY_B_HISTORY: ${OPERATOR_API_KEY_B_HISTORY:?}
+  BANK_SIM_NETWORK_KEY_C_HISTORY: ${OPERATOR_API_KEY_C_HISTORY:?}
+  BANK_SIM_NETWORK_KEY_ADMIN: ${OPERATOR_API_KEY_BANK_SIM:?}
+  BANK_SIM_COOKIE_SECURE: "true"    # стенд — только по HTTPS
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    logging: *logging
+    networks: [backend]
+    environment:
+      POSTGRES_USER: nazar
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    # предложено: пулы node и bank-sim по 10+10, якорь, оператор, команды world и train
+    command: ["postgres", "-c", "max_connections=100", "-c", "shared_buffers=128MB"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      <<: *health
+      start_period: 30s
+      test: ["CMD-SHELL", "pg_isready -U nazar"]
+    deploy:
+      resources:
+        limits: {cpus: "1.0", memory: 768M}   # сервер общий, свободно ~2,4 ГБ: база узла с миром ~0,8 ГБ на диске
+
+  keys:
+    <<: *backend
+    restart: "no"
+    user: root
+    command: >-
+      sh -c "python -m shared.keys /keys/private/node-signing.key /keys/public/node-public.key
+      && chown -R 10001 /keys"
+    volumes:
+      - node-private-key:/keys/private
+      - node-public-key:/keys/public
+    deploy:
+      resources:
+        limits: {cpus: "0.25", memory: 64M}
+
+  node:
+    <<: *backend
+    depends_on:
+      postgres: {condition: service_healthy}
+      keys: {condition: service_completed_successfully}
+    environment: *node-env
+    command: >-
+      sh -c "python -m node migrate && python -m node seed
+      && exec uvicorn node.main:app_factory --factory --host 0.0.0.0 --port 8000"
+    volumes:
+      - node-private-key:/keys/private:ro
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/system/health')"]
+    deploy:
+      resources:
+        limits: {cpus: "2.0", memory: 1G}   # решения и модели в памяти; обучение — в trainer
+
+  # Очередь обучения из песочниц: отдельный процесс, чтобы долгое обучение не тормозило решения посетителей.
+  trainer:
+    <<: *backend
+    depends_on:
+      node: {condition: service_healthy}
+    environment: *node-env
+    command: ["python", "-m", "node", "trainer"]
+    volumes:
+      - node-private-key:/keys/private:ro
+    deploy:
+      resources:
+        limits: {cpus: "1.5", memory: 1280M}   # LightGBM в 2 потока (scoring.yaml), пик ~1,2 ГБ; выше — падает обучение, не сервер
+
+  anchor:
+    <<: *backend
+    depends_on:
+      postgres: {condition: service_healthy}
+      keys: {condition: service_completed_successfully}
+    environment:
+      ANCHOR_DATABASE_URL: postgresql+psycopg://nazar:${POSTGRES_PASSWORD:?}@postgres:5432/anchor
+      ANCHOR_NODE_PUBLIC_KEY_PATH: /keys/public/node-public.key
+      ANCHOR_API_KEY_NODE: ${ANCHOR_API_KEY_NODE:?}
+    command: >-
+      sh -c "python -m anchor migrate
+      && exec uvicorn anchor.main:app_factory --factory --host 0.0.0.0 --port 8002"
+    volumes:
+      - node-public-key:/keys/public:ro
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/v1/system/health')"]
+    deploy:
+      resources:
+        limits: {cpus: "0.25", memory: 192M}
+
+  bank-sim:
+    <<: *backend
+    depends_on:
+      postgres: {condition: service_healthy}
+      node: {condition: service_healthy}
+    environment: *bank-env
+    command: >-
+      sh -c "python -m bank_sim migrate && python -m bank_sim seed
+      && exec uvicorn bank_sim.main:app_factory --factory --host 0.0.0.0 --port 8001"
+    volumes:
+      - node-public-key:/keys/public:ro
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/v1/system/health')"]
+    deploy:
+      resources:
+        limits: {cpus: "1.0", memory: 512M}
+
+  # Оператор сети кредиторов (8003): только внутри сети стенда, узлу сеть не обязательна.
+  network-operator:
+    <<: *backend
+    depends_on:
+      postgres: {condition: service_healthy}
+    environment:
+      OPERATOR_DATABASE_URL: postgresql+psycopg://nazar:${POSTGRES_PASSWORD:?}@postgres:5432/network_operator
+      OPERATOR_OPRF_SEED: ${OPERATOR_OPRF_SEED:?}
+      OPERATOR_DEMO_MODE: "true"
+      OPERATOR_API_KEY_A: ${OPERATOR_API_KEY_A:?}
+      OPERATOR_API_KEY_A_HISTORY: ${OPERATOR_API_KEY_A_HISTORY:?}
+      OPERATOR_API_KEY_B: ${OPERATOR_API_KEY_B:?}
+      OPERATOR_API_KEY_B_HISTORY: ${OPERATOR_API_KEY_B_HISTORY:?}
+      OPERATOR_API_KEY_C: ${OPERATOR_API_KEY_C:?}
+      OPERATOR_API_KEY_C_HISTORY: ${OPERATOR_API_KEY_C_HISTORY:?}
+      OPERATOR_API_KEY_BANK_SIM: ${OPERATOR_API_KEY_BANK_SIM:?}
+      OPERATOR_CALLBACK_URL_A: http://node:8000
+      OPERATOR_CALLBACK_KEY_A: ${OPERATOR_CALLBACK_KEY_A:?}
+    command: >-
+      sh -c "python -m network_operator migrate && python -m network_operator seed
+      && exec uvicorn network_operator.main:app_factory --factory --host 0.0.0.0 --port 8003"
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/v1/system/health')"]
+    deploy:
+      resources:
+        limits: {cpus: "0.5", memory: 256M}   # предложено
+
+  # Один вход стенда: статика интерфейса и прокси к узлу и имитатору (gateway/default.conf.template).
+  gateway:
+    build:
+      context: ../../frontend
+      target: stand
+      args:
+        VITE_NODE_API_BASE: /api/node
+        VITE_BANK_API_BASE: /api/bank
+        VITE_TIME_ZONE: ${STAND_TIME_ZONE:?}
+        WEB_PORT: ${GATEWAY_PORT:?}
+    image: anora-nazar-web:${GIT_SHA:?}
+    restart: unless-stopped
+    logging: *logging
+    networks: [backend, edge]
+    depends_on:
+      node: {condition: service_healthy}
+      bank-sim: {condition: service_healthy}
+    environment:
+      APP_VERSION: ${GIT_SHA:?}
+      GATEWAY_PORT: ${GATEWAY_PORT:?}
+      GATEWAY_API_RATE: ${GATEWAY_API_RATE:?}
+      GATEWAY_API_BURST: ${GATEWAY_API_BURST:?}
+      GATEWAY_SANDBOX_RATE: ${GATEWAY_SANDBOX_RATE:?}
+      GATEWAY_SANDBOX_BURST: ${GATEWAY_SANDBOX_BURST:?}
+      GATEWAY_BODY_LIMIT: ${GATEWAY_BODY_LIMIT:?}
+      GATEWAY_PROXY_TIMEOUT: ${GATEWAY_PROXY_TIMEOUT:?}
+    volumes:
+      - ./gateway:/etc/nginx/templates:ro
+    ports:
+      - "${STAND_BIND:?}:${STAND_PORT:?}:${GATEWAY_PORT:?}"
+    healthcheck:
+      <<: *health
+      start_period: 10s
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:$${GATEWAY_PORT}/healthz >/dev/null"]
+    deploy:
+      resources:
+        limits: {cpus: "0.5", memory: 64M}
+
+  # Общий мир (события кредиторов Б и В — в сеть, история — через узел), затем модели — один раз на чистом стенде (README, «Первичная загрузка»):
+  # docker compose --profile setup run --rm world && docker compose --profile setup run --rm train
+  world:
+    <<: *backend
+    restart: "no"
+    profiles: [setup]
+    depends_on:
+      bank-sim: {condition: service_healthy}
+      network-operator: {condition: service_healthy}
+    environment:
+      <<: *bank-env
+      BANK_SIM_NODE_KEY_HISTORY: ${NODE_API_KEY_HISTORY:?}
+    command: ["python", "-m", "bank_sim", "world"]
+    volumes:
+      - node-public-key:/keys/public:ro
+    deploy:
+      resources:
+        limits: {cpus: "2.0", memory: 2G}   # предложено: генерация мира и прогон истории через узел
+
+  train:
+    <<: *backend
+    restart: "no"
+    profiles: [setup]
+    depends_on:
+      node: {condition: service_healthy}
+    environment: *node-env
+    command: ["python", "-m", "node", "train", "--release-by", "risk-1", "--approve-by", "risk-2"]
+    volumes:
+      - node-private-key:/keys/private:ro
+    deploy:
+      resources:
+        limits: {cpus: "2.0", memory: 3G}   # предложено: обучение LightGBM на общем мире
+
+networks:
+  backend:
+    internal: true   # без выхода наружу: сервисам стенда интернет не нужен
+  edge: {}           # только шлюз: публикация порта на хост
+
+volumes:
+  pgdata:
+  node-private-key:
+  node-public-key:

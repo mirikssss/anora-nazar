@@ -25,6 +25,10 @@ class LeaderLoop:
     def start(self) -> None:
         self._thread.start()
 
+    def run_forever(self) -> None:
+        """Цикл в текущем потоке — для отдельного процесса (обработчик обучения)."""
+        self._run()
+
     def stop(self) -> None:
         self._stop.set()
         self._thread.join(timeout=10)

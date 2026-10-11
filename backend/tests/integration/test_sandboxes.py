@@ -30,6 +30,14 @@ def test_staff_token_is_bound_to_its_sandbox(node: Node) -> None:
     assert node.client.get("/v1/applications/A", headers=headers).status_code == 403
 
 
+def test_demo_login_only_into_sandbox(node: Node) -> None:
+    """Сотрудник общего мира без пароля мог бы выпускать модели и пороги мира — вход только в свою песочницу."""
+    world = {"X-Realm-Id": str(node.world_id)}
+    response = node.client.post("/v1/auth/demo-login", json={"user_code": "risk-1"}, headers=world)
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "sandbox_required"
+
+
 def test_reset_deletes_everything_of_the_sandbox(node: Node) -> None:
     sandbox = node.new_sandbox()
     snap = online("34000000000005", "998905550005")

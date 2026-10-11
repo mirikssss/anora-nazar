@@ -384,6 +384,14 @@ def add_to_stop_list(
     return len(rows)
 
 
+def attribute_keys(
+    session: Session, application_ids: set[UUID], kinds: list[str], now: datetime
+) -> list[tuple[str, str]]:
+    """Ключи HMAC идентификаторов заявок — для сопоставления с кешем токенов сети без исходных значений."""
+    rows = repository.attributes_of_applications(session, application_ids, kinds, now)
+    return sorted({(kind, key) for _app, kind, key, _display, _subject in rows})
+
+
 def stop_listed(
     session: Session, realm: RealmContext, application_id: UUID, kinds: list[str], as_of: datetime
 ) -> list[StopMatch]:

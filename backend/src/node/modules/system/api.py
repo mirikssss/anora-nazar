@@ -12,10 +12,16 @@ router = APIRouter(prefix="/v1/system", tags=["Система"])
 
 
 @router.get("/health")
-def health(ctx: Ctx) -> dict[str, str]:
+def health(ctx: Ctx) -> dict[str, str | None]:
+    """version — коммит сборки образа; null — сборка без версии (стенд разработки)."""
     with ctx.db.transaction() as session:
         service.database_alive(session)
-    return {"status": "ok", "policy": ctx.policies.active_version, "config": ctx.config.version}
+    return {
+        "status": "ok",
+        "version": ctx.env.app_version or None,
+        "policy": ctx.policies.active_version,
+        "config": ctx.config.version,
+    }
 
 
 @router.get("/metrics")

@@ -41,3 +41,10 @@ def scaled(count: int, scale: float) -> int:
     if count == 0:
         return 0
     return max(1, round(count * scale))
+
+
+def portion(total: int, share: float) -> int:
+    """Сколько из `total` взять при доле `share`; ненулевая доля ненулевого числа даёт хотя бы одну единицу."""
+    if total == 0 or share == 0:
+        return 0
+    return max(1, round(total * share))

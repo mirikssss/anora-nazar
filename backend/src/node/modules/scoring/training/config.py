@@ -32,12 +32,20 @@ class LogisticConfig(_Frozen):
     max_iter: int = Field(gt=0)
 
 
+NETWORK_GROUP = "network"
+NETWORK_SUFFIX = "-net"  # вариант модели с признаками сети: запускается, только когда сеть ответила
+
+
 class ModelSpec(_Frozen):
     name: str
     typology: Typology
     points: list[FeaturePoint]
     groups: list[Group]
     calibrate_by_channel: bool
+
+    @property
+    def uses_network(self) -> bool:
+        return NETWORK_GROUP in self.groups
 
 
 class TrainingConfig(_Frozen):

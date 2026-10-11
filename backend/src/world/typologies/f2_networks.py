@@ -3,6 +3,10 @@
 Кольцо с общими идентификаторами: участники подают заявки с редкого общего телефона, устройства или адреса
 организатора за несколько дней; маскировка — только один вид общей связи. Координационное кольцо — без общих
 идентификаторов: разные домохозяйства, только общие роли (сотрудник, помощник, поставщик) и всплеск во времени.
+
+Межбанковое кольцо: организатор разносит участников по кредиторам, у кредитора узла — один-два, поэтому его
+локальный индекс связей кольца почти не видит; общий телефон или устройство — поперёк банков. Такие кольца
+добавляются к квоте узла: их участники у узла почти не меняют долю F2 узла.
 """
 
 from dataclasses import dataclass, replace
@@ -13,10 +17,11 @@ from world.organizations import District
 from world.plans import ApplicationPlan, PlanFactory, ProgramRoles
 from world.population import Person
 from world.records import Channel, RoleKind
-from world.sampling import between, chance, pick
+from world.sampling import between, chance, pick, portion
 
 ROLES: tuple[RoleKind, ...] = ("employee", "helper", "supplier")
 PROGRAM_IDENTITIES: tuple[IdentityKind, ...] = ("phone", "address")  # у программной заявки нет устройства сессии
+NETWORK_IDENTITIES: tuple[IdentityKind, ...] = ("phone", "device")  # адрес в сеть кредиторов не уходит
 MULTI_KIND_MIN = 2
 
 
@@ -62,9 +67,15 @@ def _ring(factory: PlanFactory, channel: Channel, size: int, *, coordination: bo
     return _Ring(channel, district, first_day, members)
 
 
-def _identity_ring(factory: PlanFactory, ring: _Ring) -> list[ApplicationPlan]:
+def _available_kinds(factory: PlanFactory, channel: Channel, *, cross: bool) -> list[IdentityKind]:
+    spec = factory.params.fraud.f2
+    kinds = [kind for kind in spec.identity_kinds if channel == "online" or kind in PROGRAM_IDENTITIES]
+    return [kind for kind in kinds if kind in NETWORK_IDENTITIES] if cross else kinds
+
+
+def _identity_ring(factory: PlanFactory, ring: _Ring, *, cross: bool = False) -> list[ApplicationPlan]:
     spec, rng, calendar = factory.params.fraud.f2, factory.rng, factory.calendar
-    available = [kind for kind in spec.identity_kinds if ring.channel == "online" or kind in PROGRAM_IDENTITIES]
+    available = _available_kinds(factory, ring.channel, cross=cross)
     if chance(rng, spec.single_kind_rings) or len(available) < MULTI_KIND_MIN:
         count = 1
     else:
@@ -141,4 +152,25 @@ def plan_networks(factory: PlanFactory, total_applications: int, online_share: f
             members = _identity_ring(factory, _ring(factory, channel, size, coordination=False))
         key = f"F2-{index + 1:03d}"
         plans += [replace(plan, typology="F2", scheme_key=key) for plan in members]
+    return plans + _cross_rings(factory, len(sizes) - len(coordinated), online_share, len(sizes) + 1)
+
+
+def _cross_rings(factory: PlanFactory, identity_rings: int, online_share: float, first: int) -> list[ApplicationPlan]:
+    """Межбанковые кольца сверх квоты узла: их доля среди всех колец с общими идентификаторами — f2_rings."""
+    cross = factory.params.fraud.cross_lender
+    if cross is None:
+        return []
+    spec, rng = factory.params.fraud.f2, factory.rng
+    plans: list[ApplicationPlan] = []
+    for number in range(first, first + portion(identity_rings, cross.f2_rings / (1 - cross.f2_rings))):
+        size = between(rng, spec.ring_size)
+        channel: Channel = "online" if chance(rng, online_share) else "program"
+        if not _available_kinds(factory, channel, cross=True):
+            continue
+        members = _identity_ring(factory, _ring(factory, channel, size, coordination=False), cross=True)
+        node_members = min(between(rng, cross.f2_node_members), size - 1)
+        key = f"F2-{number:03d}"
+        for index, plan in enumerate(members):  # первый — организатор, его заявка у кредитора узла
+            lender = factory.node_lender if index < node_members else factory.other_lender()
+            plans.append(replace(plan, lender=lender, typology="F2", scheme_key=key, cross_lender=True))
     return plans

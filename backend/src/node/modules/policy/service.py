@@ -106,7 +106,7 @@ def propose(
     session: Session,
     registry: PolicyRegistry,
     realm: RealmContext,
-    changes: dict[str, float],
+    changes: dict[str, bool | float],
     reason: str,
     staff: str,
     editable: list[str],

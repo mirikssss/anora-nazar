@@ -15,3 +15,6 @@ api_clients:
   - name: bank-sim-history
     scopes: [history]           # прогон истории синтетического мира — только в общий мир
     key_env: NODE_API_KEY_HISTORY
+  - name: network-operator
+    scopes: [network]           # оператор сети кредиторов: уведомления о новых совпадениях (И4)
+    key_env: NODE_API_KEY_NETWORK

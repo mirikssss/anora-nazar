@@ -25,7 +25,7 @@ from node.modules.scoring.domain import calibrate, feature_row
 from node.modules.scoring.models import ModelVersion
 from node.modules.scoring.predictors import BoosterPredictor, LogisticModel
 from node.modules.scoring.training.calibrate import calibration
-from node.modules.scoring.training.config import Family, ModelSpec, TrainingConfig
+from node.modules.scoring.training.config import NETWORK_GROUP, Family, ModelSpec, TrainingConfig
 from node.modules.scoring.training.dataset import Example, age_band, gender
 
 PER_APPLICATION = frozenset({"zone2"})  # поштучная модель — без признаков графа
@@ -364,7 +364,13 @@ def _report(
     _, y, _ = _xy(oof.examples, [], spec, cfg)
     ranking = np.array(oof.raw)
     threshold = threshold_at_share(ranking, cfg.review_share)
-    solo, _ = _cross_validate(fold_list, family, spec, cfg, feature_names(spec, PER_APPLICATION))
+    without_network = frozenset({NETWORK_GROUP})
+    solo, _ = _cross_validate(fold_list, family, spec, cfg, feature_names(spec, PER_APPLICATION | without_network))
+    local = (
+        _cross_validate(fold_list, family, spec, cfg, feature_names(spec, without_network))[0]
+        if spec.uses_network
+        else oof
+    )
     baseline = np.array([e.rules_score for e in oof.examples])
     on_day = max(e.as_of for e in oof.examples).date()
     tail = fold_list[-1].test + fold_list[-1].unlabeled
@@ -378,12 +384,14 @@ def _report(
         "candidates": {name: _oof_metrics(c, spec, cfg) for name, c in candidates.items() if c.examples},
         "test": _oof_metrics(oof, spec, cfg),
         "by_channel": _by_channel(oof, spec, cfg),
+        # Блок 3, главный эксперимент: поштучно → + граф → + сеть на тех же окнах и при той же доле проверки
         "ablation": {
             "rules_graph_baseline": _metrics(y, baseline, cfg, None),
             "per_application": _oof_metrics(solo, spec, cfg) if solo.examples else None,
-            "with_graph": _oof_metrics(oof, spec, cfg),
-            # сеть кредиторов подключается в И4; те же окна и тот же бюджет проверки
-            "with_graph_and_network": {"status": "network_not_connected"},
+            "with_graph": _oof_metrics(local, spec, cfg) if local.examples else None,
+            "with_graph_and_network": (
+                _oof_metrics(oof, spec, cfg) if spec.uses_network else {"status": "see_network_variant"}
+            ),
         },
         "fairness": {
             "threshold": round(threshold, 6),
@@ -400,9 +408,16 @@ def _report(
     return result
 
 
+def _network_answered(examples: list[Example], spec: ModelSpec) -> bool:
+    names = set(feature_names(spec)) - set(feature_names(spec, frozenset({NETWORK_GROUP})))
+    return any(e.values.get(name) is not None for e in examples if e.point in spec.points for name in names)
+
+
 def train_spec(
     examples: list[Example], spec: ModelSpec, cfg: TrainingConfig, cutoff: datetime, now: datetime, timezone: str
 ) -> tuple[ModelVersion | None, dict[str, Any]]:
+    if spec.uses_network and not _network_answered(examples, spec):
+        return None, {"model": spec.name, "skipped": "network_unavailable"}
     fold_list = folds(examples, spec, cfg)
     names = feature_names(spec)
     candidates: dict[str, OutOfFold] = {}

@@ -22,7 +22,12 @@ def create(ctx: Ctx, response: Response) -> SandboxOut:
         service.add(session, sandbox_id, now)
     ctx.node.send_watermarks([outbox.watermark(sandbox_id, ctx.config.producer, 0, None, now)])
     response.set_cookie(
-        REALM_COOKIE, str(sandbox_id), httponly=True, samesite="lax", max_age=ctx.config.sandboxes.ttl_hours * 3600
+        REALM_COOKIE,
+        str(sandbox_id),
+        httponly=True,
+        secure=ctx.env.cookie_secure,
+        samesite="lax",
+        max_age=ctx.config.sandboxes.ttl_hours * 3600,
     )
     return SandboxOut(realm_id=sandbox_id)
 
@@ -30,6 +35,7 @@ def create(ctx: Ctx, response: Response) -> SandboxOut:
 @router.delete("/current", status_code=204)
 def reset(ctx: Ctx, realm: Realm, response: Response) -> Response:
     ctx.node.delete_realm(realm)
+    service.forget_in_network(ctx.network, realm)
     with ctx.db.transaction() as session:
         service.remove(session, realm)
     response.delete_cookie(REALM_COOKIE)

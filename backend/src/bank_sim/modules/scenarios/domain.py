@@ -5,13 +5,14 @@
 """
 
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from random import Random
 from typing import Annotated, Any, Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from bank_sim.modules.lenders.domain import LenderApplication, LenderTransfer
 from bank_sim.modules.sessions.domain import SessionProfile
 from bank_sim.modules.sources.domain import BureauProfile, CardsProfile, CompanyProfile, InpsProfile, SourceProfile
 from world.identifiers import Identifiers
@@ -125,7 +126,54 @@ class ApplicationStep(_Spec):
         return self
 
 
-Step = Annotated[FactsStep | CompanyStep | ApplicationStep, Field(discriminator="kind")]
+class LenderTransferSpec(_Spec):
+    card: str = Field(min_length=1)  # общая карта сценария: имя внутри запуска, номер генерируется
+    credit_share: float = Field(gt=0, le=1)
+
+
+class LenderStep(_Spec):
+    """Заявки людей сценария у другого кредитора (Б или В): события активности в сеть кредиторов в контуре песочницы.
+    Локально у банка A этих заявок нет — их видит только сеть."""
+
+    kind: Literal["lender"]
+    lender: str = Field(min_length=1, max_length=16)  # код кредитора мира и сидов оператора
+    people: list[str] = Field(min_length=1)
+    channel: Literal["online"] = "online"  # программные заявки других кредиторов сценариям пока не нужны
+    shared: SharedSpec = SharedSpec()
+    minutes_ago: int = Field(default=0, ge=0)  # заявка подана столько минут назад
+    issued: bool = False
+    transfer: LenderTransferSpec | None = None  # первый перевод кредитных денег — после выдачи
+
+    @model_validator(mode="after")
+    def _issued(self) -> Self:
+        if self.transfer is not None and not self.issued:
+            raise ValueError("Перевод кредитных денег — только после выдачи")
+        if self.shared.address is not None:
+            raise ValueError("Адрес в сеть кредиторов не уходит")
+        return self
+
+
+class DisbursementStep(_Spec):
+    """АБС банка A зачисляет кредит людям сценария — по разрешению узла (Т2)."""
+
+    kind: Literal["disbursement"]
+    people: list[str] = Field(min_length=1)
+
+
+class TransferStep(_Spec):
+    """Первый перевод кредитных денег с карты заёмщика: ТАФ банка спрашивает рекомендацию узла (Т3)."""
+
+    kind: Literal["transfer"]
+    people: list[str] = Field(min_length=1)
+    card: str = Field(min_length=1)  # карта получателя: имя внутри запуска
+    credit_share: float = Field(gt=0, le=1)  # доля зачисленного кредита
+
+
+Step = Annotated[
+    FactsStep | CompanyStep | ApplicationStep | LenderStep | DisbursementStep | TransferStep,
+    Field(discriminator="kind"),
+]
+PeopleStep = FactsStep | ApplicationStep | LenderStep | DisbursementStep | TransferStep
 
 
 class Expected(_Spec):
@@ -150,9 +198,14 @@ class ScenarioSpec(_Spec):
         for ref, person in self.people.items():
             if person.employer is not None and self._role(person.employer) != "employer":
                 errors.append(f"работодатель {person.employer} у {ref} — не компания-работодатель сценария")
+        applicants: set[str] = set()
         for step in self.steps:
-            people = step.people if isinstance(step, FactsStep | ApplicationStep) else []
+            people = step.people if isinstance(step, PeopleStep) else []
             errors += [f"нет человека {ref}" for ref in people if ref not in self.people]
+            if isinstance(step, ApplicationStep):
+                applicants.update(step.people)
+            if isinstance(step, DisbursementStep | TransferStep):
+                errors += [f"у {ref} нет заявки в банке до шага {step.kind}" for ref in people if ref not in applicants]
             if isinstance(step, CompanyStep):
                 errors += [f"нет компании {ref}" for ref in step.companies if ref not in self.companies]
             program = step.program if isinstance(step, ApplicationStep) else None
@@ -216,6 +269,7 @@ class WorldRefs:
     operator_codes: tuple[str, ...]
     pinfl_district_codes: tuple[int, int]
     house_numbers: tuple[int, int]
+    card_prefixes: tuple[str, ...]
 
     def helper(self, n: int) -> HelperRef:
         if not self.helpers:
@@ -281,6 +335,7 @@ class Cast:
     phones: dict[str, str]
     devices: dict[str, str]
     places: dict[str, Place]
+    cards: dict[str, str]
 
 
 def run_seed(realm_id: UUID, number: int) -> str:
@@ -333,19 +388,31 @@ def cast(spec: ScenarioSpec, refs: WorldRefs, rng: Random) -> Cast:
     phones: dict[str, str] = {}
     devices: dict[str, str] = {}
     places: dict[str, Place] = {}
+    cards: dict[str, str] = {}
     for step in spec.steps:
-        if not isinstance(step, ApplicationStep):
+        card = _card_name(step)
+        if card is not None and card not in cards:
+            cards[card] = ids.card(list(refs.card_prefixes))
+        if not isinstance(step, ApplicationStep | LenderStep):
             continue
         if step.shared.phone is not None and step.shared.phone not in phones:
             phones[step.shared.phone] = ids.phone()
         if step.shared.device is not None and step.shared.device not in devices:
             devices[step.shared.device] = ids.device()
-        if step.shared.address is not None and step.shared.address not in places:
+        if isinstance(step, ApplicationStep) and step.shared.address is not None and step.shared.address not in places:
             place = _place(_home(None, refs, rng), refs, rng)
             if place is None:
                 raise ScenarioError("Общему адресу нужны справочники мира: сначала прогон мира")
             places[step.shared.address] = place
-    return Cast(people=people, companies=companies, phones=phones, devices=devices, places=places)
+    return Cast(people=people, companies=companies, phones=phones, devices=devices, places=places, cards=cards)
+
+
+def _card_name(step: Step) -> str | None:
+    if isinstance(step, TransferStep):
+        return step.card
+    if isinstance(step, LenderStep) and step.transfer is not None:
+        return step.transfer.card
+    return None
 
 
 def _branch(step: ApplicationStep, refs: WorldRefs, district: str | None) -> tuple[str, str | None]:
@@ -410,3 +477,38 @@ def application_drafts(step: ApplicationStep, cast_: Cast, refs: WorldRefs) -> l
             )
         )
     return drafts
+
+
+def lender_applications(
+    step: LenderStep, cast_: Cast, now: datetime, run_id: UUID, step_number: int
+) -> list[LenderApplication]:
+    """Заявки шага у другого кредитора: идентификатор события уникален в запуске, моменты — от начала запуска."""
+    occurred = now - timedelta(minutes=step.minutes_ago)
+    apps: list[LenderApplication] = []
+    for ref in step.people:
+        person = cast_.people[ref]
+        transfer = (
+            None
+            if step.transfer is None
+            else LenderTransfer(cast_.cards[step.transfer.card], step.transfer.credit_share, occurred)
+        )
+        apps.append(
+            LenderApplication(
+                id=f"{run_id.hex[:12]}-{step_number}-{ref}",
+                lender=step.lender,
+                channel=step.channel,
+                pinfl=person.pinfl,
+                phone=cast_.phones[step.shared.phone] if step.shared.phone is not None else person.phone,
+                device_id=cast_.devices[step.shared.device] if step.shared.device is not None else person.device_id,
+                supplier_inn=None,
+                occurred_at=occurred,
+                issued_at=occurred if step.issued else None,
+                transfer=transfer,
+            )
+        )
+    return apps
+
+
+def transfer_amount(credit: int, share: float) -> int:
+    """Сумма перевода — доля зачисленного кредита, не меньше 1 сума."""
+    return max(1, round(credit * share))

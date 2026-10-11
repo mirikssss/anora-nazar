@@ -3,12 +3,17 @@
 Жертва чаще «чистый клиент с долгой историей»: без текущих долгов и с картой в банке. Сессия с аномалиями —
 восстановление доступа, новое устройство, звонок, ночь, быстрая форма, сумма сильно больше трат.
 Ловушка: часть жертв проходит без аномалий — по признакам не отличить от честных.
+
+Серия по ПИНФЛ (межбанковая схема): от имени части жертв в окне вокруг заявки у кредитора узла подают заявки
+ещё у других кредиторов — тот же ПИНФЛ, телефон, устройство и сумма. Серия идёт до выдачи: после выдачи бюро
+закрывает ПИНФЛ для остальных (№ 3759 п. 19–20), поэтому их заявки бюро отклоняет (см. lenders).
 """
 
 from dataclasses import replace
+from datetime import timedelta
 
 from world.plans import ApplicationPlan, PlanFactory, draw_signals
-from world.sampling import chance, pick
+from world.sampling import between, chance, pick, portion
 
 
 def plan_coercion(factory: PlanFactory, online_total: int) -> list[ApplicationPlan]:
@@ -31,4 +36,24 @@ def plan_coercion(factory: PlanFactory, online_total: int) -> list[ApplicationPl
         moment = calendar.moment(rng, calendar.start, calendar.days, night=signals.night)
         plan = factory.online(person, moment, signals)
         plans.append(replace(plan, typology="F1", scheme_key=f"F1-{number:04d}"))
+    return _with_series(factory, plans)
+
+
+def _with_series(factory: PlanFactory, victims: list[ApplicationPlan]) -> list[ApplicationPlan]:
+    cross = factory.params.fraud.cross_lender
+    if cross is None:
+        return victims
+    rng, calendar = factory.rng, factory.calendar
+    window = timedelta(minutes=cross.f1_series_minutes)
+    chosen = set(rng.sample(range(len(victims)), portion(len(victims), cross.f1_series)))
+    plans: list[ApplicationPlan] = []
+    for index, victim in enumerate(victims):
+        series: list[ApplicationPlan] = []
+        if index in chosen:
+            for lender in factory.other_lenders(between(rng, cross.f1_series_lenders)):
+                moment = calendar.around(rng, victim.submitted_at, timedelta(), window)
+                if moment is not None:
+                    series.append(replace(victim, lender=lender, submitted_at=moment, cross_lender=True))
+        plans.append(replace(victim, cross_lender=bool(series)))
+        plans += series
     return plans

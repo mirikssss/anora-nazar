@@ -13,8 +13,10 @@ from node.modules.audit import service as audit
 from node.modules.cases import service as cases
 from node.modules.cases.domain import strategy_of
 from node.modules.cases.service import CaseContext, DecisionSummary
+from node.modules.consortium import service as consortium
+from node.modules.consortium.service import NetworkContext
 from node.modules.decisions import repository
-from node.modules.decisions.domain import DecisionInputs, DecisionResult, TransferInputs, decide
+from node.modules.decisions.domain import DecisionInputs, DecisionResult, EarlierTransfer, TransferInputs, decide
 from node.modules.decisions.domain import recommend_transfer as domain_recommend
 from node.modules.decisions.models import Decision
 from node.modules.decisions.schemas import AssessmentIn
@@ -35,7 +37,7 @@ from node.modules.verification import service as verification
 from node.modules.verification.domain import VerificationConfig
 from shared.contracts.transfers import TransferRecommendationIn
 from shared.crypto.canonical_json import sha256_hex
-from shared.errors import ConflictError, NotFoundError, ValidationFailedError
+from shared.errors import AppError, ConflictError, NotFoundError, ValidationFailedError
 from shared.idempotency import IdempotencyStore
 
 SCOPE = "assessments"
@@ -50,6 +52,7 @@ class AssessContext:
     models: ModelCache
     cases: CaseContext
     verification: VerificationConfig
+    network: NetworkContext
 
 
 def _record(inputs: DecisionInputs, result: DecisionResult, bundle: PolicyBundle) -> dict[str, Any]:
@@ -100,6 +103,9 @@ def assess(
     app = accepted.application
     bundle = ctx.policies.for_realm(session, realm)
     policy = bundle.policy
+    reported = repository.network_reported(session, app.id)
+    watch_until = as_of + policy.assessment_validity.for_channel(body.snapshot.channel)
+    network, tokens = consortium.observe(session, ctx.network, realm, app.id, body.snapshot, policy, watch_until, as_of)
     computed = features.compute(
         session,
         realm,
@@ -110,6 +116,7 @@ def assess(
         policy,
         ctx.intake.index_key,
         tuple(ctx.cases.config.stop_list_kinds),
+        network,
     )
     signals = dict(computed.signals)
     if _client_signal(session, ctx, realm, body.application_id, as_of):
@@ -124,6 +131,7 @@ def assess(
         graph=computed.graph,
         scoring=scoring.evaluate(session, ctx.models, realm, computed.vector, policy.model),
         signals=signals,
+        network=network,
     )
     result = decide(inputs, bundle)
     record = _record(inputs, result, bundle)
@@ -193,6 +201,19 @@ def assess(
     trail = {**identity, "record_hash": record_hash, "policy": policy.version}
     audit.append(session, realm.id, "decision.made", trail, as_of)
     outbox.enqueue(session, ctx.intake.config.outbox, realm.id, "decision.made", trail, as_of)
+    if tokens:
+        consortium.report_application(
+            session,
+            ctx.network,
+            realm,
+            app.id,
+            body.application_version,
+            body.snapshot.channel,
+            tokens,
+            first=not reported,
+            occurred_at=body.occurred_at,
+            now=as_of,
+        )
 
     response = {
         **identity,
@@ -325,6 +346,9 @@ def recommend_transfer(
     card_key, _display = index.record_card(
         session, realm.id, app.id, app.current_version, subject, body.recipient_card, ctx.intake.index_key, now
     )
+    network, tokens = consortium.observe_card(
+        session, ctx.network, realm, app.id, snapshot.applicant.pinfl, body.recipient_card, bundle.policy, now
+    )
     inputs = TransferInputs(
         as_of=now,
         application_version=app.current_version,
@@ -332,6 +356,8 @@ def recommend_transfer(
         transfer=body,
         recipient_borrowers=index.card_subjects(session, realm, card_key, rules.window_days, now),
         stop_matches=[m.model_dump() for m in index.stop_listed(session, realm, app.id, ["card"], now)],
+        earlier_transfers=_earlier_transfers(session, app.id, body.transfer_id),
+        network=network,
     )
     result = domain_recommend(inputs, bundle)
     record = {
@@ -372,6 +398,9 @@ def recommend_transfer(
         "recommended_action": result.recommended_action,
     }
     audit.append(session, realm.id, "transfer.recommended", trail, now)
+    if tokens:
+        share = max(0, body.amount - body.balance_before_credit) / snapshot.loan.amount
+        consortium.report_transfer(session, ctx.network, realm, body.transfer_id, tokens, share, body.requested_at, now)
     if result.level == "red":
         summary = DecisionSummary(
             decision_id=decision_id,
@@ -393,6 +422,74 @@ def recommend_transfer(
         )
         cases.open_for(session, ctx.cases, realm, app.id, body.application_id, summary, now)
     return {"recommendation_id": str(decision_id), **result.model_dump(mode="json")}
+
+
+def retry_network_before_permit(
+    session: Session, ctx: AssessContext, realm: RealmContext, external_id: str, now: datetime
+) -> bool:
+    """Блок 3: сеть не ответила при оценке — до зачисления (Т2) запрос повторяется. Ответила теперь — заявка
+    помечается «нужна новая оценка», и разрешение ждёт новой оценки уже с ответом сети. Не ответила снова —
+    узел работает без неё."""
+    app_id = applications.find_id(session, realm.id, external_id)
+    if app_id is None:
+        return False
+    latest = repository.latest_assessment(session, app_id)
+    if latest is None or latest.record["inputs"].get("network", {}).get("status") != "unavailable":
+        return False
+    policy = ctx.policies.for_realm(session, realm).policy
+    snapshot = applications.snapshot_of(session, applications.get_by_id(session, app_id), latest.application_version)[0]
+    network, _tokens = consortium.observe(
+        session, ctx.network, realm, app_id, snapshot, policy, latest.valid_until, now
+    )
+    if network.status != "ok":
+        return False
+    locked = applications.lock(session, {app_id})
+    cause = {"network_available": True, "decision_id": str(latest.id), "at": now.isoformat()}
+    if not applications.mark_for_reassessment(session, realm.id, set(locked), cause, now):
+        return False
+    event = {"application_id": external_id, "cause": cause, "kinds": ["network"]}
+    outbox.enqueue(session, ctx.intake.config.outbox, realm.id, "application.reassessment_required", event, now)
+    audit.append(session, realm.id, "network.retry_before_permit", {"application_id": external_id}, now)
+    return True
+
+
+def report_issuance(
+    session: Session, ctx: AssessContext, realm: RealmContext, external_id: str, occurred_at: datetime, now: datetime
+) -> None:
+    """Выдача — событие активности в сеть, пока она включена в контуре."""
+    if not consortium.enabled(ctx.policies.for_realm(session, realm).policy):
+        return
+    app_id = applications.find_id(session, realm.id, external_id)
+    if app_id is None:
+        return
+    app = applications.get_by_id(session, app_id)
+    snapshot = applications.snapshot_of(session, app, app.current_version)[0]
+    try:
+        consortium.report_issuance(session, ctx.network, realm, app_id, snapshot, occurred_at, now)
+    except AppError as exc:  # сеть не ответила на токены: выдача уже исполнена, банк не ждёт сеть
+        audit.append(
+            session, realm.id, "network.report_failed", {"application_id": external_id, "error": exc.code}, now
+        )
+
+
+def _earlier_transfers(session: Session, app_id: UUID, transfer_id: str) -> list[EarlierTransfer]:
+    """Прошлые переводы этого кредита по записям Т3; повтор того же перевода не считается дважды."""
+    seen: dict[str, EarlierTransfer] = {}
+    for decision in repository.transfer_recommendations(session, app_id):
+        transfer = decision.record["inputs"]["transfer"]
+        if transfer["transfer_id"] != transfer_id:
+            seen[transfer["transfer_id"]] = EarlierTransfer.model_validate(
+                {
+                    "transfer_id": transfer["transfer_id"],
+                    "amount": transfer["amount"],
+                    "requested_at": transfer["requested_at"],
+                }
+            )
+    return list(seen.values())
+
+
+def network_status_counts(session: Session, realm_id: UUID) -> dict[str, int]:
+    return repository.network_status_counts(session, realm_id)
 
 
 def latest_assessment_at(session: Session, realm_ids: tuple[UUID, ...]) -> datetime | None:

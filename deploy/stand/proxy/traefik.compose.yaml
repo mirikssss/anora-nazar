@@ -1,0 +1,18 @@
+# Traefik в контейнере (часто так у ClusterOS): шлюз стенда подключается к сети Traefik, порт на хост не нужен.
+# Запуск: docker compose -f compose.yaml -f proxy/traefik.compose.yaml up -d
+# Подставить: имя внешней сети Traefik (`docker network ls`), entrypoint HTTPS и certresolver из его конфигурации.
+services:
+  gateway:
+    networks: [backend, edge, traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: traefik
+      traefik.http.routers.anora-nazar.rule: Host(`${STAND_DOMAIN:?}`)
+      traefik.http.routers.anora-nazar.entrypoints: websecure
+      traefik.http.routers.anora-nazar.tls.certresolver: letsencrypt
+      traefik.http.services.anora-nazar.loadbalancer.server.port: ${GATEWAY_PORT:?}
+
+networks:
+  traefik:
+    external: true
+    name: traefik

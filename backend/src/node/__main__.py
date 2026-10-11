@@ -1,4 +1,7 @@
-"""Команды узла: python -m node migrate | seed | revision "<сообщение>" | train [--release-by A --approve-by B].
+"""Команды узла: python -m node migrate | seed | revision "<сообщение>" | train [--release-by A --approve-by B]
+| trainer.
+
+trainer — отдельный процесс очереди обучения: долгое обучение не делит CPU с решениями API (стенд).
 
 train обучает модели на общем мире и пишет отчёт качества; с двумя сотрудниками-подписантами — сразу выпускает
 новые версии в общий мир (запрос и подтверждение разными людьми, как в API).
@@ -9,6 +12,7 @@ import json
 import sys
 from pathlib import Path
 
+from node.background import NodeTasks
 from node.main import build_context
 from node.modules.identity import service as identity
 from node.modules.realms import service as realms
@@ -37,8 +41,12 @@ def main(argv: list[str]) -> None:
         db.dispose()
     elif command == "train":
         train(env, argv[1:])
+    elif command == "trainer":
+        NodeTasks(build_context(env, SystemClock())).training_loop().run_forever()
     else:
-        raise SystemExit("Команды: migrate | seed | revision <сообщение> | train [--release-by A --approve-by B]")
+        raise SystemExit(
+            "Команды: migrate | seed | revision <сообщение> | train [--release-by A --approve-by B] | trainer"
+        )
 
 
 def train(env: NodeEnv, argv: list[str]) -> None:
@@ -51,7 +59,7 @@ def train(env: NodeEnv, argv: list[str]) -> None:
     now = ctx.clock.now()
     with ctx.db.transaction() as session:
         world = realms.resolve(session, realms.world_id(session), now)
-        result = pipeline.run(session, world, cfg, ctx.policies.active.policy, ctx.index_key, now)
+        result = pipeline.run(session, world, cfg, ctx.policies.active.policy, ctx.index_key, now, ctx.network())
         if args.release_by and args.approve_by:
             for code in (args.release_by, args.approve_by):
                 identity.require_staff_permission(session, code, "models.promote")

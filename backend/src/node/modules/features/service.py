@@ -9,6 +9,8 @@ from uuid import UUID
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from node.modules.consortium.domain import NetworkObservation
+from node.modules.consortium.domain import features as network_features
 from node.modules.features.domain import (
     FEATURE_SET_VERSION,
     Facts,
@@ -139,6 +141,7 @@ def compute(
     policy: Policy,
     index_key: bytes,
     stop_kinds: tuple[str, ...] = (),
+    network: NetworkObservation | None = None,
 ) -> FeatureResult:
     cfg = config()
     subject = subject_key(index_key, snapshot.applicant.pinfl)
@@ -166,7 +169,9 @@ def compute(
     )
     prices = index.comparable_prices(session, realm, application_id, snapshot, levels, as_of)
     parts |= zone3_features(snapshot, facts, prices, roles, as_of, cfg)
-    vector, values = assemble(point, snapshot, parts, facts)
+    observation = network or NetworkObservation(status="disabled")
+    parts |= network_features(observation)
+    vector, values = assemble(point, snapshot, parts, facts, observation.status)
     signals: dict[str, Any] = dict(values)
     matches = index.stop_listed(session, realm, application_id, list(stop_kinds), as_of) if stop_kinds else []
     if matches:  # идентификатор из подтверждённого дела — правило продукта «не ниже красного» (Блок 4)

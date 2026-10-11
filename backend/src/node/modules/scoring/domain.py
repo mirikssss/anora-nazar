@@ -48,6 +48,11 @@ def contract_matches(model_points: list[str], model_feature_set: str, point: str
     return point in model_points and model_feature_set == feature_set
 
 
+def requires_network(feature_names: list[str]) -> bool:
+    """Модель с признаками сети запускается, только когда сеть ответила; иначе работает локальная."""
+    return any(PASSPORTS[name].group == "network" for name in feature_names if name in PASSPORTS)
+
+
 def as_number(value: Value) -> float:
     """Пропуск остаётся пропуском: LightGBM учитывает отсутствие данных явно (Блок 3)."""
     if value is None:

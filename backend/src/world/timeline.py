@@ -117,13 +117,7 @@ class _Assembler:
         self.truth: dict[str, ApplicationTruth] = {}
 
     def add(self, application_id: str, plan: ApplicationPlan) -> None:
-        self.truth[application_id] = ApplicationTruth(
-            lender=self._params.applications.lender,
-            typology=plan.typology,
-            scheme_key=plan.scheme_key,
-            shared_identities=plan.shared_identities,
-            shared_roles=plan.shared_roles,
-        )
+        self.truth[application_id] = plan.truth()
         checks = draw_checks(self._rng, self._params.applications.mandatory_failures)
         self._source_facts(application_id, plan)
         self.sink.assessment(

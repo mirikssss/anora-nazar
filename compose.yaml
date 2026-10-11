@@ -59,6 +59,11 @@ services:
       NODE_API_KEY_EVENTS: ${NODE_API_KEY_EVENTS:?}
       NODE_API_KEY_REALMS: ${NODE_API_KEY_REALMS:?}
       NODE_API_KEY_HISTORY: ${NODE_API_KEY_HISTORY:?}
+      NODE_DEMO_MODE: "true"        # стенд разработки — демо: вход в роли без пароля
+      NODE_NETWORK_URL: http://network-operator:8003
+      NODE_NETWORK_API_KEY: ${OPERATOR_API_KEY_A:?}
+      NODE_NETWORK_HISTORY_KEY: ${OPERATOR_API_KEY_A_HISTORY:?}
+      NODE_API_KEY_NETWORK: ${OPERATOR_CALLBACK_KEY_A:?}
     command: >-
       sh -c "python -m node migrate && python -m node seed
       && exec uvicorn node.main:app_factory --factory --host 0.0.0.0 --port 8000"
@@ -90,6 +95,32 @@ services:
       <<: *health
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/v1/system/health')"]
 
+  network-operator:
+    <<: *backend
+    depends_on:
+      postgres: {condition: service_healthy}
+    environment:
+      OPERATOR_DATABASE_URL: postgresql+psycopg://nazar:${POSTGRES_PASSWORD}@postgres:5432/network_operator
+      OPERATOR_OPRF_SEED: ${OPERATOR_OPRF_SEED:?}
+      OPERATOR_DEMO_MODE: "true"
+      OPERATOR_API_KEY_A: ${OPERATOR_API_KEY_A:?}
+      OPERATOR_API_KEY_A_HISTORY: ${OPERATOR_API_KEY_A_HISTORY:?}
+      OPERATOR_API_KEY_B: ${OPERATOR_API_KEY_B:?}
+      OPERATOR_API_KEY_B_HISTORY: ${OPERATOR_API_KEY_B_HISTORY:?}
+      OPERATOR_API_KEY_C: ${OPERATOR_API_KEY_C:?}
+      OPERATOR_API_KEY_C_HISTORY: ${OPERATOR_API_KEY_C_HISTORY:?}
+      OPERATOR_API_KEY_BANK_SIM: ${OPERATOR_API_KEY_BANK_SIM:?}
+      OPERATOR_CALLBACK_URL_A: http://node:8000
+      OPERATOR_CALLBACK_KEY_A: ${OPERATOR_CALLBACK_KEY_A:?}
+    command: >-
+      sh -c "python -m network_operator migrate && python -m network_operator seed
+      && exec uvicorn network_operator.main:app_factory --factory --host 0.0.0.0 --port 8003"
+    ports:
+      - "127.0.0.1:8003:8003"
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/v1/system/health')"]
+
   bank-sim:
     <<: *backend
     depends_on:
@@ -104,6 +135,12 @@ services:
       BANK_SIM_NODE_KEY_REALMS: ${NODE_API_KEY_REALMS:?}
       BANK_SIM_NODE_PUBLIC_KEY_PATH: /keys/public/node-public.key
       BANK_SIM_API_KEY_NODE: ${BANK_SIM_API_KEY_NODE:?}
+      BANK_SIM_NETWORK_URL: http://network-operator:8003
+      BANK_SIM_NETWORK_KEY_B: ${OPERATOR_API_KEY_B:?}
+      BANK_SIM_NETWORK_KEY_C: ${OPERATOR_API_KEY_C:?}
+      BANK_SIM_NETWORK_KEY_B_HISTORY: ${OPERATOR_API_KEY_B_HISTORY:?}
+      BANK_SIM_NETWORK_KEY_C_HISTORY: ${OPERATOR_API_KEY_C_HISTORY:?}
+      BANK_SIM_NETWORK_KEY_ADMIN: ${OPERATOR_API_KEY_BANK_SIM:?}
     command: >-
       sh -c "python -m bank_sim migrate && python -m bank_sim seed
       && exec uvicorn bank_sim.main:app_factory --factory --host 0.0.0.0 --port 8001"
@@ -160,7 +197,8 @@ services:
       - ./frontend/eslint.config.js:/app/eslint.config.js:ro
     command: ["npm", "run", "check"]
 
-  # Общий мир: генерация и прогон истории через узел, затем обучение моделей и выпуск двумя подписантами.
+  # Общий мир: события кредиторов Б и В — в сеть, генерация и прогон истории через узел, затем обучение моделей
+  # и выпуск двумя подписантами.
   # Один раз на чистом стенде: docker compose --profile setup run --rm world && docker compose --profile setup run --rm train
   world:
     <<: *backend
@@ -168,6 +206,7 @@ services:
     profiles: [setup]
     depends_on:
       bank-sim: {condition: service_healthy}
+      network-operator: {condition: service_healthy}
     environment:
       BANK_SIM_DATABASE_URL: postgresql+psycopg://nazar:${POSTGRES_PASSWORD}@postgres:5432/bank_sim
       BANK_SIM_NODE_URL: http://node:8000
@@ -178,6 +217,12 @@ services:
       BANK_SIM_NODE_KEY_HISTORY: ${NODE_API_KEY_HISTORY:?}
       BANK_SIM_NODE_PUBLIC_KEY_PATH: /keys/public/node-public.key
       BANK_SIM_API_KEY_NODE: ${BANK_SIM_API_KEY_NODE:?}
+      BANK_SIM_NETWORK_URL: http://network-operator:8003
+      BANK_SIM_NETWORK_KEY_B: ${OPERATOR_API_KEY_B:?}
+      BANK_SIM_NETWORK_KEY_C: ${OPERATOR_API_KEY_C:?}
+      BANK_SIM_NETWORK_KEY_B_HISTORY: ${OPERATOR_API_KEY_B_HISTORY:?}
+      BANK_SIM_NETWORK_KEY_C_HISTORY: ${OPERATOR_API_KEY_C_HISTORY:?}
+      BANK_SIM_NETWORK_KEY_ADMIN: ${OPERATOR_API_KEY_BANK_SIM:?}
     command: ["python", "-m", "bank_sim", "world"]
 
   train:
@@ -195,6 +240,10 @@ services:
       NODE_BANK_SIM_API_KEY: ${BANK_SIM_API_KEY_NODE:?}
       NODE_ANCHOR_URL: http://anchor:8002
       NODE_ANCHOR_API_KEY: ${ANCHOR_API_KEY_NODE:?}
+      NODE_NETWORK_URL: http://network-operator:8003
+      NODE_NETWORK_API_KEY: ${OPERATOR_API_KEY_A:?}
+      NODE_NETWORK_HISTORY_KEY: ${OPERATOR_API_KEY_A_HISTORY:?}
+      NODE_API_KEY_NETWORK: ${OPERATOR_CALLBACK_KEY_A:?}
     command: ["python", "-m", "node", "train", "--release-by", "risk-1", "--approve-by", "risk-2"]
     volumes:
       - node-private-key:/keys/private:ro

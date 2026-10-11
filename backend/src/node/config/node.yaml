@@ -1,9 +1,10 @@
-# Рабочие значения узла. Согласованы с владельцем 11.10.2026; секреты и адреса — только из окружения.
+# Рабочие значения узла. Согласованы с владельцем 11.10.2026 (значения И3 — стартовая политика демо); раздел network — предложено.
+# Секреты и адреса — только из окружения.
 version: node-config-1
 
 policy:
-  active_version: policy-v3
-  editable:                         # пороги, которые риск-менеджер меняет со вторым подписантом — предложено
+  active_version: policy-v4
+  editable:                         # пороги и переключатели, которые риск-менеджер меняет со вторым подписантом
     - model.risk_appetite
     - model.yellow_probability.F1
     - model.yellow_probability.F2
@@ -13,6 +14,8 @@ policy:
     - coordination.min_ratio_to_pace
     - transfers.credit_share_min
     - acceptance.batch_acts_per_signer_day
+    - network.enabled               # И4: переключатель сети — значимая настройка, только со вторым подписантом
+    - network.combined_min_rules
 
 permits:
   reserve_ttl_seconds: 120          # резерв без итога → «неизвестно»
@@ -44,8 +47,12 @@ outbox:
         - hold.released
         - permit.reserved
         - permit.finished
+    - name: network-operator        # И4: события активности и результаты дел — только пока сеть включена
+      topics:
+        - network.activity
+        - network.confirmed
 
-risk:                               # обзор риск-менеджера — предложено
+risk:                               # обзор риск-менеджера
   days: 30                          # доли уровней по дням
   drift_recent_days: 7              # последнее окно против эталонного
   drift_reference_days: 30
@@ -54,13 +61,16 @@ risk:                               # обзор риск-менеджера —
   drift_features: [amount_to_spending, device_age_days, independent_rare_links, price_robust_z, income_jump_ratio, loan_amount_log]
 
 texts:
-  active_catalog: texts-v1          # каталог текстов для сотрудников и заёмщиков (modules/texts/catalog)
+  active_catalog: texts-v2          # каталог текстов для сотрудников и заёмщиков (modules/texts/catalog)
 
 history:
   max_batch: 500                  # элементов истории в одном запросе прогона
 
 http:
   timeout_seconds: 5
+
+network:                            # клиент оператора сети — предложено
+  timeout_seconds: 2                # запрос в момент решения: дольше — «сеть недоступна», решение по своим признакам
 
 database:
   pool_size: 10

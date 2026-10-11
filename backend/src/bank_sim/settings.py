@@ -26,7 +26,16 @@ class BankEnv(BaseSettings):
     node_key_history: str | None = None  # нужен только команде прогона мира
     node_public_key_path: Path
     api_key_node: str
+    # Сеть кредиторов: без адреса оператора кредиторы Б и В молчат, сценарии с ними не запускаются
+    network_url: str | None = None
+    network_key_b: str | None = None
+    network_key_c: str | None = None
+    network_key_b_history: str | None = None  # нужны только команде прогона мира
+    network_key_c_history: str | None = None
+    network_key_admin: str | None = None  # удаление контура песочницы и сбой «сеть недоступна»
     log_level: str = "INFO"
+    app_version: str | None = Field(default=None, validation_alias="APP_VERSION")  # коммит сборки, из образа
+    cookie_secure: bool = False  # True на стенде по HTTPS: cookie песочницы только по защищённому соединению
     config_path: Path = PACKAGE_DIR / "config" / "bank_sim.yaml"
     seeds_dir: Path = PACKAGE_DIR / "seeds"
 
@@ -95,6 +104,13 @@ class BorrowerConfig(_Frozen):
 class ScenariosConfig(_Frozen):
     pinfl_district_codes: tuple[int, int]
     house_numbers: tuple[int, int]
+    card_prefixes: list[str] = Field(min_length=1)
+
+
+class LendersConfig(_Frozen):
+    delivery_delay_seconds: int = Field(ge=0)
+    history_chunk: int = Field(gt=0)
+    timeout_seconds: float = Field(gt=0)
 
 
 class BankConfig(_Frozen):
@@ -111,6 +127,7 @@ class BankConfig(_Frozen):
     transfers: TransfersConfig
     borrower: BorrowerConfig
     scenarios: ScenariosConfig
+    lenders: LendersConfig
 
     @property
     def world_params_path(self) -> Path:

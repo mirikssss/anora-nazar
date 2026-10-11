@@ -12,6 +12,7 @@ from node.modules.applications import service as applications
 from node.modules.audit import anchoring
 from node.modules.audit import service as audit
 from node.modules.cases import service as cases
+from node.modules.consortium import service as consortium
 from node.modules.ingest import service as ingest
 from node.modules.outbox import service as outbox
 from node.modules.permits import service as permits
@@ -55,7 +56,9 @@ class NodeTasks:
 
     def training_runs(self) -> None:
         ctx = self._ctx
-        runs.process_next(ctx.db, ctx.training_config, ctx.policies.active.policy, ctx.index_key, ctx.clock.now())
+        runs.process_next(
+            ctx.db, ctx.training_config, ctx.policies.active.policy, ctx.index_key, ctx.clock.now(), ctx.network()
+        )
 
     def expire_reserved(self) -> None:
         now = self._ctx.clock.now()
@@ -107,10 +110,11 @@ class NodeTasks:
         )
 
     def deliver_outbox(self) -> None:
-        senders = {
+        senders: dict[str, outbox.Deliver] = {
             "bank-sim": lambda messages: self._ctx.bank.call(
                 "POST", "/v1/node/notifications", json={"messages": messages}
-            )
+            ),
+            "network-operator": partial(consortium.deliver, self._ctx.network_client),
         }
         with self._ctx.db.transaction() as session:
             outbox.deliver_pending(session, self._ctx.config.outbox, senders, self._ctx.clock.now())

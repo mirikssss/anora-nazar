@@ -1,4 +1,5 @@
-"""Генератор мира: воспроизводимость, порядок истории, контракт снимка, типологии, поздние факты, связи колец."""
+"""Генератор мира: воспроизводимость, порядок истории, контракт снимка, типологии, поздние факты, связи колец,
+межбанковые схемы world-v2 и результаты дел других кредиторов."""
 
 from collections import defaultdict
 from datetime import timedelta
@@ -7,15 +8,29 @@ import pytest
 
 from shared.contracts.application import ApplicationSnapshot
 from shared.contracts.history import HistoryAssessment, HistoryEvent
-from world import DEFAULT_PARAMS_PATH, ApplicationTruth, World, generate, load_params
+from world import (
+    DEFAULT_PARAMS_PATH,
+    PARAMS_DIR,
+    ApplicationTruth,
+    OtherLenderApplication,
+    World,
+    generate,
+    load_params,
+)
 
 PARAMS = load_params(DEFAULT_PARAMS_PATH, scale=0.05)
+PARAMS_V2 = load_params(PARAMS_DIR / "world-v2.yaml", scale=0.05)
 COMPARED_ITEMS = 1000
 
 
 @pytest.fixture(scope="module")
 def world() -> World:
     return generate(PARAMS)
+
+
+@pytest.fixture(scope="module")
+def world_v2() -> World:
+    return generate(PARAMS_V2)
 
 
 def snapshots(world: World) -> dict[str, ApplicationSnapshot]:
@@ -44,6 +59,20 @@ def rings(world: World) -> list[tuple[ApplicationTruth, list[ApplicationSnapshot
 def identity(snapshot: ApplicationSnapshot, kind: str) -> str | None:
     applicant = snapshot.applicant
     return {"phone": applicant.phone, "device": applicant.device_id, "address": applicant.address}[kind]
+
+
+def other_identity(application: OtherLenderApplication, kind: str) -> str | None:
+    return {"phone": application.phone, "device": application.device_id}[kind]
+
+
+def cross_lender_node_apps(world: World) -> dict[str, list[tuple[ApplicationTruth, ApplicationSnapshot]]]:
+    """Схема → заявки кредитора узла в межбанковой схеме."""
+    schemes: dict[str, list[tuple[ApplicationTruth, ApplicationSnapshot]]] = defaultdict(list)
+    for app_id, snapshot in snapshots(world).items():
+        truth = world.truth[app_id]
+        if truth.cross_lender and truth.scheme_key is not None:
+            schemes[truth.scheme_key].append((truth, snapshot))
+    return schemes
 
 
 def test_same_params_give_same_world(world):
@@ -116,3 +145,63 @@ def test_coordination_rings_share_roles_but_no_identifiers(world):
         }
         assert truth.shared_roles
         assert all(len(roles[role]) == 1 for role in truth.shared_roles)
+
+
+def test_v2_same_params_give_same_world(world_v2):
+    again = generate(PARAMS_V2)
+    assert again.other_lenders == world_v2.other_lenders
+    assert again.truth == world_v2.truth
+
+
+def test_cross_lender_rings_share_identifiers_across_lenders(world_v2):
+    """У узла один-два участника кольца, а общий телефон или устройство — и в заявках других кредиторов."""
+    elsewhere: dict[tuple[str | None, str], set[str | None]] = defaultdict(set)
+    for application in world_v2.other_lenders:
+        truth = world_v2.truth[application.id]
+        if truth.typology == "F2":
+            for kind in truth.shared_identities:
+                elsewhere[(truth.scheme_key, kind)].add(other_identity(application, kind))
+    schemes = cross_lender_node_apps(world_v2)
+    rings = {key: members for key, members in schemes.items() if members[0][0].typology == "F2"}
+    assert rings
+    for key, members in rings.items():
+        assert len(members) <= PARAMS_V2.fraud.cross_lender.f2_node_members[1]
+        kinds = members[0][0].shared_identities
+        assert kinds
+        for kind in kinds:
+            assert {identity(snapshot, kind) for _, snapshot in members} & elsewhere[(key, kind)]
+
+
+def test_node_has_cross_lender_applications_without_local_link(world_v2):
+    """Заявка межбанковой схемы, которую локальный граф узла с другими заявками схемы не связывает."""
+    kinds = ("phone", "device", "address")
+    unlinked = 0
+    for members in cross_lender_node_apps(world_v2).values():
+        for index, (_, snapshot) in enumerate(members):
+            own = {(kind, value) for kind in kinds if (value := identity(snapshot, kind)) is not None}
+            others = [other for i, (_, other) in enumerate(members) if i != index]
+            rest = {(kind, identity(other, kind)) for other in others for kind in kinds}
+            unlinked += not own & rest
+    assert unlinked
+
+
+def test_confirmations_hold_only_fraudster_identifiers(world_v2):
+    """В результат дела идут общие идентификаторы мошенника, но не ПИНФЛ и не личный телефон заёмщика."""
+    people: dict[tuple[str, str | None], set[str]] = defaultdict(set)
+    for snapshot in snapshots(world_v2).values():
+        for kind in ("phone", "device"):
+            people[(kind, identity(snapshot, kind))].add(snapshot.applicant.pinfl)
+    for application in world_v2.other_lenders:
+        for kind in ("phone", "device"):
+            people[(kind, other_identity(application, kind))].add(application.pinfl)
+    confirmed = [application for application in world_v2.other_lenders if application.confirmation is not None]
+    assert confirmed
+    for application in confirmed:
+        kinds = application.confirmation.kinds
+        assert kinds
+        assert "pinfl" not in kinds
+        assert application.confirmation.typology != "F1"
+        assert ("card" in kinds) == (application.transfer is not None)
+        for kind in ("phone", "device"):
+            if kind in kinds:
+                assert len(people[(kind, other_identity(application, kind))]) > 1

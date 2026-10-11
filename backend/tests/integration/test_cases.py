@@ -149,7 +149,7 @@ def test_threshold_change_needs_second_signer_and_stays_in_sandbox(node: Node) -
     approved = node.client.post(f"/v1/policy/proposals/{proposal['proposal_id']}/approval", headers=risk2).json()
     version = approved["resulting_version"]
     assert node.client.get("/v1/policy", headers=risk1).json()["active_version"] == version
-    assert node.client.get("/v1/policy", headers=node.staff(other, "risk-1")).json()["active_version"] == "policy-v3"
+    assert node.client.get("/v1/policy", headers=node.staff(other, "risk-1")).json()["active_version"] == "policy-v4"
     bad = node.client.post(
         "/v1/policy/proposals", headers=risk1, json={"changes": {"index.window_days": 30}, "reason": "Нельзя"}
     )

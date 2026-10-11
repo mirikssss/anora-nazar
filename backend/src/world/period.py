@@ -93,6 +93,17 @@ class Calendar:
         latest = max(self.days - days, 0)
         return self.start + timedelta(days=rng.randint(0, latest))
 
+    def contains(self, moment: datetime) -> bool:
+        return self.start_at <= moment < self.end_at
+
+    def around(self, rng: Random, moment: datetime, nearest: timedelta, farthest: timedelta) -> datetime | None:
+        """Момент на случайном расстоянии от `moment` в пределах [nearest, farthest], раньше или позже;
+        если сторона выходит за период — другая сторона, если обе — None."""
+        offset = timedelta(seconds=rng.uniform(nearest.total_seconds(), farthest.total_seconds()))
+        sides = [moment + offset, moment - offset]
+        rng.shuffle(sides)
+        return next((candidate for candidate in sides if self.contains(candidate)), None)
+
     def moment(self, rng: Random, first_day: date, days: int, *, night: bool) -> datetime:
         """Случайный момент в окне: день равномерно, час — по весам ночных или дневных часов."""
         span = max(min(days, (self.end_date - first_day).days), 1)

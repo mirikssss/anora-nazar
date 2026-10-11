@@ -34,7 +34,7 @@ def get_principal(request: Request, ctx: Ctx) -> Principal:
         return identity.authenticate(session, header.removeprefix("Bearer ").strip(), ctx.env.session_secret)
 
 
-def _parse_realm(raw: str | None) -> UUID:
+def parse_realm(raw: str | None) -> UUID:
     if not raw:
         raise ValidationFailedError("missing_realm", f"Нужен заголовок {REALM_HEADER}")
     try:
@@ -49,16 +49,16 @@ def _resolve(ctx: NodeContext, realm_id: UUID) -> RealmContext:
 
 
 def get_public_realm(request: Request, ctx: Ctx) -> RealmContext:
-    return _resolve(ctx, _parse_realm(request.headers.get(REALM_HEADER)))
+    return _resolve(ctx, parse_realm(request.headers.get(REALM_HEADER)))
 
 
 def get_realm(request: Request, ctx: Ctx, principal: Annotated[Principal, Depends(get_principal)]) -> RealmContext:
     header = request.headers.get(REALM_HEADER)
     if isinstance(principal, StaffPrincipal):
-        if header and _parse_realm(header) != principal.realm_id:
+        if header and parse_realm(header) != principal.realm_id:
             raise ForbiddenError("realm_mismatch", "Токен выдан для другой песочницы")
         return _resolve(ctx, principal.realm_id)
-    return _resolve(ctx, _parse_realm(header))
+    return _resolve(ctx, parse_realm(header))
 
 
 def get_idempotency_key(request: Request) -> str:

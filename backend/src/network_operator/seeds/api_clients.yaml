@@ -1,0 +1,39 @@
+# Кредиторы и системы, которые ходят к оператору сети. Ключи — только из окружения, в базе — их хеши.
+# Права: oprf — вычисления OPRF, activity — события, query — счётчики и статистика, confirmed — результаты дел,
+# history — прогон синтетической истории (received_at и as_of из запроса, без квоты OPRF),
+# realms — удаление контура песочницы, demo — кнопки сбоев стенда (только OPERATOR_DEMO_MODE=true).
+lenders:
+  - code: A                       # банк A — узел Anora Nazar; получает уведомления о новых совпадениях
+    callback: {url_env: OPERATOR_CALLBACK_URL_A, key_env: OPERATOR_CALLBACK_KEY_A}
+  - code: B                       # кредиторы Б и В — генераторы событий в имитаторе банка, уведомлений не ждут
+  - code: C
+
+api_clients:
+  - name: lender-a
+    lender: A
+    scopes: [oprf, activity, query, confirmed]
+    key_env: OPERATOR_API_KEY_A
+  - name: lender-a-history
+    lender: A
+    scopes: [oprf, activity, query, confirmed, history]   # ретро-признаки сети при обучении моделей узла
+    key_env: OPERATOR_API_KEY_A_HISTORY
+  - name: lender-b
+    lender: B
+    scopes: [oprf, activity, query, confirmed]
+    key_env: OPERATOR_API_KEY_B
+  - name: lender-b-history
+    lender: B
+    scopes: [oprf, activity, query, confirmed, history]
+    key_env: OPERATOR_API_KEY_B_HISTORY
+  - name: lender-c
+    lender: C
+    scopes: [oprf, activity, query, confirmed]
+    key_env: OPERATOR_API_KEY_C
+  - name: lender-c-history
+    lender: C
+    scopes: [oprf, activity, query, confirmed, history]
+    key_env: OPERATOR_API_KEY_C_HISTORY
+  - name: bank-sim
+    lender: null                  # стенд, не кредитор: удаляет контуры песочниц и включает сбой сети
+    scopes: [realms, demo]
+    key_env: OPERATOR_API_KEY_BANK_SIM

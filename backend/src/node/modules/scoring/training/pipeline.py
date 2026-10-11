@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from node.modules.consortium.service import NetworkContext
 from node.modules.features import service as features
 from node.modules.labels import service as labels
 from node.modules.policy.domain import Policy
@@ -15,7 +16,7 @@ from node.modules.realms.domain import RealmContext
 from node.modules.scoring import repository
 from node.modules.scoring.models import ModelVersion
 from node.modules.scoring.training import dataset
-from node.modules.scoring.training.config import ModelSpec, TrainingConfig
+from node.modules.scoring.training.config import NETWORK_GROUP, NETWORK_SUFFIX, ModelSpec, TrainingConfig
 from node.modules.scoring.training.train import train_spec
 from shared.errors import ConfigurationError
 
@@ -27,17 +28,28 @@ class TrainingResult:
 
 
 def specs(cfg: TrainingConfig) -> list[ModelSpec]:
-    """При f2_mode=per_channel общая F2 заменяется двумя моделями — по одной на канал и точку."""
-    if cfg.f2_mode == "shared":
-        return list(cfg.models)
-    result = []
+    """При f2_mode=per_channel общая F2 заменяется двумя моделями — по одной на канал и точку.
+
+    Модель с группой network обучается двумя вариантами на тех же окнах: локальный (узел без сети) и «-net».
+    """
+    split = []
     for spec in cfg.models:
-        if spec.typology != "F2":
-            result.append(spec)
+        if spec.typology != "F2" or cfg.f2_mode == "shared":
+            split.append(spec)
             continue
-        result += [
+        split += [
             spec.model_copy(update={"name": f"{spec.name}-online", "points": ["T1"], "calibrate_by_channel": False}),
             spec.model_copy(update={"name": f"{spec.name}-program", "points": ["T4"], "calibrate_by_channel": False}),
+        ]
+    result = []
+    for spec in split:
+        if not spec.uses_network:
+            result.append(spec)
+            continue
+        local = [g for g in spec.groups if g != NETWORK_GROUP]
+        result += [
+            spec.model_copy(update={"groups": local}),
+            spec.model_copy(update={"name": f"{spec.name}{NETWORK_SUFFIX}"}),
         ]
     return result
 
@@ -49,11 +61,12 @@ def run(
     policy: Policy,
     index_key: bytes,
     now: datetime,
+    network: NetworkContext | None = None,
 ) -> TrainingResult:
     if cfg.feature_set != features.config().version:
         raise ConfigurationError(f"Обучение настроено на {cfg.feature_set}, а узел считает {features.config().version}")
     cutoff = labels.latest_received(session, realm.visible_ids) or now
-    examples = dataset.build(session, realm, cutoff, policy, index_key)
+    examples = dataset.build(session, realm, cutoff, policy, index_key, network, now)
     versions, summaries = [], []
     for spec in specs(cfg):
         version, summary = train_spec(examples, spec, cfg, cutoff, now, features.config().timezone)

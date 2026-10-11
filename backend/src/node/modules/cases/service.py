@@ -20,12 +20,15 @@ from node.modules.cases.domain import (
     ZONE_BY_TYPOLOGY,
     CasesConfig,
     Outcome,
+    OutcomeRule,
     ParticipantAction,
     Strategy,
     due_at,
     queue_for,
 )
 from node.modules.cases.models import Case, CaseApplication, CaseEvent
+from node.modules.consortium import service as consortium
+from node.modules.consortium.service import NetworkContext
 from node.modules.identity.domain import StaffPrincipal
 from node.modules.index import service as index
 from node.modules.index.domain import GraphEdge, GraphNode
@@ -33,8 +36,10 @@ from node.modules.labels import service as labels
 from node.modules.outbox import service as outbox
 from node.modules.permits import service as permits
 from node.modules.policy.domain import Policy
+from node.modules.policy.service import PolicyRegistry
 from node.modules.realms.domain import RealmContext
 from node.settings import NodeConfig
+from shared.contracts.network import TokenKind
 from shared.errors import ConflictError, ForbiddenError, NotFoundError, ValidationFailedError
 
 SYSTEM = "system"
@@ -43,6 +48,9 @@ QUEUE_PERMISSIONS = {
     "online": ("cases.online.view", "cases.online.decide"),
     "group": ("cases.group.view", "cases.group.decide"),
 }
+# решение по заявке в деле — своё право очереди; роль участника — отдельное право (Блок 4, роли и права)
+HOLD_PERMISSIONS = {"online": "pauses.lift", "group": "holds.manage"}
+ASSIGN_ROLE_PERMISSION = "participants.assign_role"
 LABEL_SOURCE = {"online": "antifraud_center", "group": "internal_control"}
 
 
@@ -51,6 +59,8 @@ class CaseContext:
     config: CasesConfig
     node: NodeConfig
     policy: Policy
+    network: NetworkContext | None = None
+    policies: PolicyRegistry | None = None  # действующая политика контура: включена ли сеть
 
 
 @dataclass(frozen=True)
@@ -182,6 +192,11 @@ def _require(staff: StaffPrincipal, case: Case, decide: bool) -> None:
     view, act = QUEUE_PERMISSIONS[case.queue]
     if (act if decide else view) not in staff.permissions:
         raise ForbiddenError("permission_required", f"Нужно право «{act if decide else view}»")
+
+
+def _require_permission(staff: StaffPrincipal, permission: str) -> None:
+    if permission not in staff.permissions:
+        raise ForbiddenError("permission_required", f"Нужно право «{permission}»")
 
 
 def _own_division(staff: StaffPrincipal, members: list[CaseApplication]) -> None:
@@ -364,6 +379,9 @@ def decide_participant(
         raise ConflictError("case_closed", "Дело уже закрыто")
     if role is not None and role not in ctx.config.participant_roles:
         raise ValidationFailedError("unknown_role", "Неизвестная роль участника")
+    _require_permission(staff, HOLD_PERMISSIONS[case.queue])
+    if role is not None:
+        _require_permission(staff, ASSIGN_ROLE_PERMISSION)
     app = applications.lock(session, {app_id})[app_id]
     if action == "release":
         permits.release_holds(
@@ -462,6 +480,7 @@ def close(
             now=now,
         )
     recalculated = _recalculate_linked(session, ctx, realm, case, {m.application_id for m in members}, now)
+    shared = _report_to_network(session, ctx, realm, case, rule, outcome, members, participants, now)
     case.status, case.outcome, case.checklist = "closed", outcome, {"items": checklist, "answers": answers}
     case.closed_at = case.updated_at = now
     _log(
@@ -477,10 +496,60 @@ def close(
             "stop_list": stopped,
             "labels": labeled,
             "recalculated": recalculated,
+            "network_tokens": shared,
         },
         now,
     )
     return case
+
+
+def _report_to_network(
+    session: Session,
+    ctx: CaseContext,
+    realm: RealmContext,
+    case: Case,
+    rule: OutcomeRule,
+    outcome: str,
+    members: list[CaseApplication],
+    participants: list[CaseApplication],
+    now: datetime,
+) -> int:
+    """Результат проверки — в сеть, только пока она включена и только по исходу (Блок 4).
+
+    Подтверждённый фрод — идентификаторы участников, кроме жертв и посторонних: телефон, устройство, карта,
+    ПИНФЛ организатора, поставщик схемы. Подтверждённое воздействие — только карта-получатель мошенника.
+    """
+    if rule.network is None or ctx.network is None or ctx.policies is None:
+        return 0
+    if not consortium.enabled(ctx.policies.for_realm(session, realm).policy):
+        return 0
+    sources = members if rule.network == "recipient_card" else participants
+    card_keys = [
+        key for _kind, key in index.attribute_keys(session, {m.application_id for m in sources}, ["card"], now)
+    ]
+    items: list[tuple[TokenKind, str]] = []
+    if rule.network == "fraudster_identifiers":
+        for member in participants:
+            app = applications.get_by_id(session, member.application_id)
+            snapshot = applications.snapshot_of(session, app, app.current_version)[0]
+            items.append(("phone", snapshot.applicant.phone))
+            if snapshot.applicant.device_id is not None:
+                items.append(("device", snapshot.applicant.device_id))
+            if member.role == "organizer":
+                items.append(("pinfl", snapshot.applicant.pinfl))
+            if snapshot.program is not None and (case.zone == 3 or member.role == "involved_supplier"):
+                items.append(("supplier_inn", snapshot.program.supplier_inn))
+    return consortium.report_confirmed(
+        session,
+        ctx.network,
+        realm,
+        f"case:{case.id}",
+        TYPOLOGY_BY_ZONE[case.zone],
+        outcome,
+        sorted(set(items)),
+        card_keys,
+        now,
+    )
 
 
 def _recalculate_linked(

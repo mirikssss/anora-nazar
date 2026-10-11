@@ -10,6 +10,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from node.modules.consortium.domain import NetworkObservation
 from node.modules.features.domain import FeatureVector
 from node.modules.index.domain import GroupView
 from node.modules.policy.domain import Channel, MandatoryCheck, Point, PolicyBundle, resolve_action
@@ -41,6 +42,7 @@ class DecisionInputs(BaseModel):
     graph: GroupView
     scoring: ScoringOutcome
     signals: dict[str, Any]
+    network: NetworkObservation | None = None  # None — записи до сети (И1–И3)
 
 
 class DecisionResult(BaseModel):
@@ -126,6 +128,31 @@ def _coordination_reasons(inputs: DecisionInputs, bundle: PolicyBundle) -> list[
     return [bundle.reason("GRAPH_COORDINATION_CLUSTER", [c.model_dump() for c in flagged], rules.level)]
 
 
+def _network_reasons(inputs: DecisionInputs, bundle: PolicyBundle) -> list[Reason]:
+    """Сеть видит то, чего не видит один банк. Не ответила — причина без уровня, решение по своим признакам."""
+    rules, observation = bundle.policy.network, inputs.network
+    if rules is None or observation is None or observation.status == "disabled":
+        return []
+    if observation.status == "unavailable":
+        return [bundle.reason("SYSTEM_NETWORK_UNAVAILABLE", [{"error": observation.error}], None)]
+    fired = [r for r in rules.rules if observation.counters.get(r.counter, 0) >= r.min]
+    combined = len(fired) >= rules.combined_min_rules
+    reasons = [
+        bundle.reason(
+            r.code,
+            [{"counter": r.counter, "value": observation.counters.get(r.counter, 0), "threshold": r.min}],
+            max_level([lvl for lvl in (r.level, rules.combined_level if combined else None) if lvl is not None])
+            if r.level is not None or combined
+            else None,
+        )
+        for r in fired
+    ]
+    if observation.confirmed:
+        evidence = [m.model_dump() for m in observation.confirmed]
+        reasons.append(bundle.reason("NETWORK_CONFIRMED_CASE_IDENTIFIER", evidence, rules.confirmed_level))
+    return reasons
+
+
 def _source_reasons(inputs: DecisionInputs, bundle: PolicyBundle) -> list[Reason]:
     """Какие источники не ответили — видно в причинах; уровень это не поднимает (Блок 3)."""
     missing = inputs.features.unavailable_sources
@@ -161,19 +188,27 @@ def decide(inputs: DecisionInputs, bundle: PolicyBundle) -> DecisionResult:
     reasons += _model_reasons(inputs, bundle)
     reasons += _graph_reasons(inputs, bundle)
     reasons += _coordination_reasons(inputs, bundle)
+    reasons += _network_reasons(inputs, bundle)
     reasons += _source_reasons(inputs, bundle)
 
-    level = max_level([r.level for r in reasons if r.level is not None])
-    leading = max(
-        (r for r in reasons if r.level is not None), key=lambda r: LEVEL_ORDER[r.level or "green"], default=None
-    )
+    leveled = [r for r in reasons if r.level is not None]
+    level = max_level([r.level for r in leveled if r.level is not None])
+    leading = max(leveled, key=lambda r: LEVEL_ORDER[r.level or "green"], default=None)
     return DecisionResult(
         outcome="assessed",
         level=level,
-        action=resolve_action(policy, inputs.point, level, leading),
+        action=resolve_action(policy, inputs.point, level, leading, leveled),
         reasons=reasons,
         valid_until=valid_until,
     )
+
+
+class EarlierTransfer(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    transfer_id: str
+    amount: int
+    requested_at: datetime
 
 
 class TransferInputs(BaseModel):
@@ -187,6 +222,8 @@ class TransferInputs(BaseModel):
     transfer: TransferRecommendationIn
     recipient_borrowers: int
     stop_matches: list[dict[str, Any]]
+    earlier_transfers: list[EarlierTransfer] = []  # дробление: прошлые переводы этого кредита в окне
+    network: NetworkObservation | None = None
 
 
 class TransferRecommendation(BaseModel):
@@ -199,26 +236,51 @@ class TransferRecommendation(BaseModel):
 
 def recommend_transfer(inputs: TransferInputs, bundle: PolicyBundle) -> TransferRecommendation:
     """Т3: большая доля кредита в первые часы на новую карту, связанную с другими заёмщиками или с делом, —
-    красный и совет удержать до подтверждения; решает транзакционный антифрод банка (ревью A)."""
+    красный и совет удержать до подтверждения; решает транзакционный антифрод банка (ревью A).
+
+    Доля считается по всем переводам этого кредита в окне — дробление суммы её не прячет. Заёмщики с этой
+    картой — свои по индексу плюс у других кредиторов по сети, если она включена и ответила.
+    """
     rules = bundle.policy.transfers
     if rules is None:
         raise ConfigurationError(f"В политике {bundle.policy.version} нет правил первого перевода")
     t = inputs.transfer
-    share = round(max(0, t.amount - t.balance_before_credit) / inputs.loan_amount, 4)
+    window_start = t.credited_at
+    earlier = [e for e in inputs.earlier_transfers if window_start <= e.requested_at <= t.requested_at]
+    moved = t.amount + sum(e.amount for e in earlier)
+    share = round(max(0, moved - t.balance_before_credit) / inputs.loan_amount, 4)
     hours = round((t.requested_at - t.credited_at).total_seconds() / 3600, 2)
     early_big = share >= rules.credit_share_min and hours <= rules.within_hours
-    linked = inputs.recipient_borrowers >= rules.linked_borrowers_min
-    red = bool(inputs.stop_matches) or (early_big and t.recipient_is_new and linked)
+    network = inputs.network if inputs.network is not None and inputs.network.status == "ok" else None
+    network_borrowers = network.counters.get("card_borrowers_30d", 0) if network is not None else 0
+    linked_borrowers = inputs.recipient_borrowers + network_borrowers
+    linked = linked_borrowers >= rules.linked_borrowers_min
+    confirmed = [m for m in network.confirmed if m.kind == "card"] if network is not None else []
+    red = bool(inputs.stop_matches) or bool(confirmed) or (early_big and t.recipient_is_new and linked)
     level: Level = "red" if red else "yellow" if early_big and t.recipient_is_new else "green"
     reasons = []
     if early_big:
-        evidence = {"credit_share": share, "hours_since_credit": hours, "threshold": rules.credit_share_min}
+        evidence: dict[str, Any] = {
+            "credit_share": share,
+            "hours_since_credit": hours,
+            "threshold": rules.credit_share_min,
+            "transfers_counted": len(earlier) + 1,
+        }
         reasons.append(bundle.reason("F1_FIRST_TRANSFER_CREDIT_SHARE", [evidence], level))
     if t.recipient_is_new:
-        evidence = {"recipient_borrowers": inputs.recipient_borrowers, "threshold": rules.linked_borrowers_min}
+        evidence = {
+            "recipient_borrowers": inputs.recipient_borrowers,
+            "network_borrowers": network_borrowers if network is not None else None,
+            "network_lenders": network.counters.get("card_lenders_30d", 0) if network is not None else None,
+            "threshold": rules.linked_borrowers_min,
+        }
         reasons.append(bundle.reason("F1_NEW_RECIPIENT", [evidence], level if early_big else None))
     if inputs.stop_matches:
         reasons.append(bundle.reason("PRODUCT_CONFIRMED_CASE_IDENTIFIER", inputs.stop_matches, "red"))
+    if confirmed:
+        reasons.append(bundle.reason("NETWORK_CONFIRMED_CASE_IDENTIFIER", [m.model_dump() for m in confirmed], "red"))
+    if inputs.network is not None and inputs.network.status == "unavailable":
+        reasons.append(bundle.reason("SYSTEM_NETWORK_UNAVAILABLE", [{"error": inputs.network.error}], None))
     return TransferRecommendation(
         level=level, recommended_action="hold_until_confirmed" if red else "allow", reasons=reasons
     )

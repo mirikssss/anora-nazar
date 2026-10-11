@@ -6,15 +6,16 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from node.modules.cases.domain import Outcome, ParticipantAction
+from node.modules.policy.reasons import Level, ReasonSource, Typology
 
 Value = float | int | bool | None
 
 
 class ReasonOut(BaseModel):
     code: str
-    typology: str | None
-    source: str
-    level: str | None
+    typology: Typology | None
+    source: ReasonSource
+    level: Level | None
     norm: str | None
     evidence: list[dict[str, Any]]
 

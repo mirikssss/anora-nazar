@@ -21,10 +21,12 @@ from node.modules.scoring.domain import (
     channel_of,
     contract_matches,
     feature_row,
+    requires_network,
     top_contributions,
 )
 from node.modules.scoring.models import ModelRelease, ModelVersion
 from node.modules.scoring.predictors import Predictor
+from node.modules.scoring.training.config import NETWORK_SUFFIX
 
 
 @dataclass
@@ -95,11 +97,16 @@ def evaluate(
 ) -> ScoringOutcome:
     active = active_versions(session, realm)
     point = vector.point or ""
+    answered = vector.network == "ok"
 
     def fits(v: ModelVersion) -> bool:
-        return contract_matches(v.points, v.feature_set_version, point, vector.set_version)
+        contract = contract_matches(v.points, v.feature_set_version, point, vector.set_version)
+        return contract and (answered or not requires_network(v.feature_names))
 
     compatible = [v for v in active.values() if fits(v)]
+    if answered:  # сеть ответила — вариант «-net» вместо локального той же модели
+        names = {v.name for v in compatible}
+        compatible = [v for v in compatible if f"{v.name}{NETWORK_SUFFIX}" not in names]
     checked = [str(v.id) for v in active.values()]
     if policy is None or not compatible:
         return ScoringOutcome(

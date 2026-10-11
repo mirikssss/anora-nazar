@@ -1,0 +1,118 @@
+# Шлюз стенда — один вход: / — статика интерфейса (SPA), /api/node/ — узел, /api/bank/ — имитатор банка.
+# TLS и сабдомен держит reverse proxy сервера. Значения ${...} подставляет образ nginx из окружения контейнера
+# (deploy/stand/.env); переменные nginx вида $host не трогаются.
+
+# Адрес посетителя — от reverse proxy сервера. Шлюз опубликован только на адрес хоста (STAND_BIND),
+# поэтому соседи из частных сетей — это и есть доверенный proxy.
+set_real_ip_from 127.0.0.1;
+set_real_ip_from 10.0.0.0/8;
+set_real_ip_from 172.16.0.0/12;
+set_real_ip_from 192.168.0.0/16;
+real_ip_header X-Forwarded-For;
+real_ip_recursive on;
+
+# Ограничения на адрес посетителя. Проверяющие часто сидят за одним NAT площадки — пределы с запасом.
+limit_req_zone $binary_remote_addr zone=api:10m rate=${GATEWAY_API_RATE};
+limit_req_zone $binary_remote_addr zone=sandboxes:1m rate=${GATEWAY_SANDBOX_RATE};
+limit_req_status 429;
+
+# Адреса сервисов перечитываются у DNS Docker: пересозданный контейнер с новым IP не ломает шлюз.
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+upstream node_api {
+    zone node_api 64k;
+    server node:8000 resolve;
+    keepalive 16;
+}
+
+upstream bank_api {
+    zone bank_api 64k;
+    server bank-sim:8001 resolve;
+    keepalive 16;
+}
+
+server {
+    listen ${GATEWAY_PORT};
+    server_name _;
+    server_tokens off;
+    root /usr/share/nginx/html;
+    client_max_body_size ${GATEWAY_BODY_LIMIT};
+
+    gzip on;
+    gzip_min_length 1024;
+    gzip_types application/json application/javascript text/css image/svg+xml;
+
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+    proxy_connect_timeout 5s;
+    proxy_read_timeout ${GATEWAY_PROXY_TIMEOUT};
+    proxy_send_timeout ${GATEWAY_PROXY_TIMEOUT};
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy same-origin always;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Коммит сборки интерфейса; версии сервисов — /api/node/v1/system/health и /api/bank/v1/system/health.
+    location = /version {
+        default_type text/plain;
+        return 200 "${APP_VERSION}\n";
+    }
+
+    # Вызовы систем банка по API-ключам — только внутри сети стенда: из браузера их нет.
+    location ~ ^/api/node/v1/(realms|history|events|permits|assessments|transfers)(/|$) {
+        return 404;
+    }
+
+    location = /api/node/v1/network/notifications {
+        return 404;
+    }
+
+    location ^~ /api/bank/v1/node/ {
+        return 404;
+    }
+
+    location = /api/bank/v1/sandboxes {
+        limit_req zone=sandboxes burst=${GATEWAY_SANDBOX_BURST} nodelay;
+        proxy_pass http://bank_api/v1/sandboxes;
+    }
+
+    location /api/node/ {
+        limit_req zone=api burst=${GATEWAY_API_BURST} nodelay;
+        proxy_pass http://node_api/;
+    }
+
+    location /api/bank/ {
+        limit_req zone=api burst=${GATEWAY_API_BURST} nodelay;
+        proxy_pass http://bank_api/;
+    }
+
+    location /api/ {
+        return 404;
+    }
+
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        add_header X-Content-Type-Options nosniff always;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy same-origin always;
+    }
+
+    location / {
+        try_files $uri /index.html;
+    }
+}

@@ -1,4 +1,5 @@
-"""Фоновые задачи имитатора: доставка событий в узел, отметки очереди, удаление брошенных песочниц."""
+"""Фоновые задачи имитатора: доставка событий в узел, отметки очереди, удаление брошенных песочниц (и их контура
+у оператора сети)."""
 
 import logging
 from datetime import datetime, timedelta
@@ -75,5 +76,8 @@ class BankTasks:
     def delete_inactive_sandboxes(self) -> None:
         ttl = timedelta(hours=self._ctx.config.sandboxes.ttl_hours)
         with self._ctx.db.transaction() as session:
-            for realm_id in sandboxes.inactive(session, self._ctx.clock.now(), ttl):
+            expired = sandboxes.inactive(session, self._ctx.clock.now(), ttl)
+        for realm_id in expired:
+            sandboxes.forget_in_network(self._ctx.network, realm_id)
+            with self._ctx.db.transaction() as session:
                 sandboxes.remove(session, realm_id)

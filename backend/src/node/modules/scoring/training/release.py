@@ -13,7 +13,7 @@ from shared.errors import ConflictError, ForbiddenError, NotFoundError
 
 def request(session: Session, realm_id: UUID, model_id: UUID, staff_code: str, now: datetime) -> ModelRelease:
     version = repository.get(session, model_id)
-    if version is None:
+    if version is None or version.realm_id not in (None, realm_id):  # чужая песочница не видна
         raise NotFoundError("model_not_found", "Версия модели не найдена")
     release = ModelRelease(
         id=uuid4(),

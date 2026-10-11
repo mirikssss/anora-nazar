@@ -61,3 +61,49 @@ def feature_values(
         )
     )
     return [(at, {n: v.get(n) for n in names}) for at, v in rows]
+
+
+_NETWORK_STATUS = Decision.record["inputs"]["network"]["status"].astext
+
+
+def network_status_counts(session: Session, realm_id: UUID) -> dict[str, int]:
+    status = func.coalesce(_NETWORK_STATUS, "disabled")
+    rows = session.execute(
+        select(status, func.count())
+        .where(Decision.realm_id == realm_id, Decision.point.in_(("T1", "T4")))
+        .group_by(status)
+    )
+    return {str(status): int(count) for status, count in rows}
+
+
+def network_reported(session: Session, application_id: UUID) -> bool:
+    """Событие заявки уже ушло в сеть: была оценка, на которой сеть ответила (токены были)."""
+    found = session.scalar(
+        select(Decision.id)
+        .where(
+            Decision.application_id == application_id,
+            Decision.point.in_(("T1", "T4")),
+            _NETWORK_STATUS == "ok",
+        )
+        .limit(1)
+    )
+    return found is not None
+
+
+def transfer_recommendations(session: Session, application_id: UUID) -> list[Decision]:
+    return list(
+        session.scalars(
+            select(Decision)
+            .where(Decision.application_id == application_id, Decision.point == "T3")
+            .order_by(Decision.as_of)
+        )
+    )
+
+
+def latest_assessment(session: Session, application_id: UUID) -> Decision | None:
+    return session.scalars(
+        select(Decision)
+        .where(Decision.application_id == application_id, Decision.point.in_(("T1", "T4")))
+        .order_by(Decision.as_of.desc())
+        .limit(1)
+    ).one_or_none()

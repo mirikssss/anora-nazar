@@ -1,4 +1,5 @@
-"""План заявки — что честный заёмщик или типология собирается подать; фабрика планов с общими правилами каналов.
+"""План заявки — что честный заёмщик или типология собирается подать и какому кредитору; фабрика планов
+с общими правилами каналов.
 
 План ещё без внешнего id и без обязательных шагов: их выдаёт сборка истории в порядке времени.
 """
@@ -13,8 +14,8 @@ from world.identifiers import Identifiers
 from world.organizations import CatalogItem, Organizations, registration_date
 from world.period import Calendar
 from world.population import Person, Population
-from world.records import Channel, EmployeeRecord, HelperRecord, RoleKind, SupplierRecord, Typology
-from world.sampling import chance, lognormal, noise, pick, uniform
+from world.records import ApplicationTruth, Channel, EmployeeRecord, HelperRecord, RoleKind, SupplierRecord, Typology
+from world.sampling import chance, lognormal, noise, pick, uniform, weighted
 
 IncomeJump = Literal["mandatory", "voluntary"]
 
@@ -86,10 +87,22 @@ class ApplicationPlan:
     term_months: int
     program: ProgramPart | None
     signals: Signals
+    lender: str
     typology: Typology | None = None
     scheme_key: str | None = None
     shared_identities: tuple[IdentityKind, ...] = ()
     shared_roles: tuple[RoleKind, ...] = ()
+    cross_lender: bool = False
+
+    def truth(self) -> ApplicationTruth:
+        return ApplicationTruth(
+            lender=self.lender,
+            typology=self.typology,
+            scheme_key=self.scheme_key,
+            shared_identities=self.shared_identities,
+            shared_roles=self.shared_roles,
+            cross_lender=self.cross_lender,
+        )
 
 
 @dataclass(frozen=True)
@@ -118,6 +131,23 @@ class PlanFactory:
         self.population = population
         self.ids = ids
         self.rng = rng
+
+    @property
+    def node_lender(self) -> str:
+        return self.params.applications.lender
+
+    def other_lenders(self, count: int) -> list[str]:
+        """До `count` разных кредиторов, кроме узла, — по долям рынка."""
+        pool = {lender.code: lender.share for lender in self.params.lenders if lender.code != self.node_lender}
+        chosen: list[str] = []
+        while pool and len(chosen) < count:
+            code = weighted(self.rng, pool)
+            chosen.append(code)
+            del pool[code]
+        return chosen
+
+    def other_lender(self) -> str:
+        return self.other_lenders(1)[0]
 
     def honest_signals(self) -> Signals:
         signals = draw_signals(self.rng, self.params.honest, self.params.session)
@@ -152,6 +182,7 @@ class PlanFactory:
             term_months=pick(self.rng, self.params.applications.online_terms),
             program=None,
             signals=signals,
+            lender=self.node_lender,
         )
 
     def market_price(self, item: CatalogItem) -> float:
@@ -209,4 +240,5 @@ class PlanFactory:
             term_months=pick(self.rng, self.params.applications.program_terms),
             program=part,
             signals=replace(signals, night=False),
+            lender=self.node_lender,
         )

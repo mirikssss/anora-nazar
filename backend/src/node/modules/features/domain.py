@@ -86,7 +86,7 @@ def load_feature_config(version: str) -> FeatureConfig:
     return FeatureConfig.model_validate(load_yaml(CATALOG_DIR / f"{version}.yaml"))
 
 
-FEATURE_SET_VERSION = "fs-3"
+FEATURE_SET_VERSION = "fs-4"
 
 
 class FeatureVector(_Frozen):
@@ -94,6 +94,7 @@ class FeatureVector(_Frozen):
     point: Point | None = None  # нет в записях набора fs-1
     values: dict[str, Value]
     unavailable_sources: list[str] = []
+    network: Literal["disabled", "ok", "unavailable"] = "disabled"  # нет в записях до fs-4
 
 
 class Facts(_Frozen):
@@ -292,7 +293,11 @@ SIGNALS = ("price_above_market",)
 
 
 def assemble(
-    point: Point, snapshot: ApplicationSnapshot, parts: dict[str, Value], facts: Facts
+    point: Point,
+    snapshot: ApplicationSnapshot,
+    parts: dict[str, Value],
+    facts: Facts,
+    network: Literal["disabled", "ok", "unavailable"] = "disabled",
 ) -> tuple[FeatureVector, dict[str, Value]]:
     """Вектор точки — только признаки с паспортом этой точки; сигналы для правил продукта — отдельно."""
     context: dict[str, Value] = {
@@ -309,5 +314,6 @@ def assemble(
         point=point,
         values=values,
         unavailable_sources=unavailable_sources(snapshot, facts),
+        network=network,
     )
     return vector, {name: merged.get(name) for name in SIGNALS if merged.get(name) is not None}

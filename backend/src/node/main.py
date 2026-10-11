@@ -23,6 +23,7 @@ from shared.errors import install_error_handlers
 from shared.http import ServiceClient
 from shared.idempotency import IdempotencyStore
 from shared.logging import configure_logging
+from shared.network.client import NetworkClient
 
 
 def build_context(env: NodeEnv, clock: Clock) -> NodeContext:
@@ -42,14 +43,24 @@ def build_context(env: NodeEnv, clock: Clock) -> NodeContext:
         cases_config=CasesConfig.model_validate(load_yaml(env.cases_config_path)),
         verification_config=VerificationConfig.model_validate(load_yaml(env.verification_config_path)),
         training_config=load_training_config(env.scoring_config_path),
+        network_client=_network_client(env, env.network_api_key, config.network.timeout_seconds),
+        network_history=_network_client(env, env.network_history_key, timeout),
     )
+
+
+def _network_client(env: NodeEnv, key: str | None, timeout: float) -> NetworkClient | None:
+    if env.network_url is None or key is None:
+        return None
+    return NetworkClient(env.network_url, key, timeout_seconds=timeout)
 
 
 def create_app(ctx: NodeContext, *, run_background: bool) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         tasks = NodeTasks(ctx)
-        runners = [tasks.loop(), tasks.training_loop()] if run_background else []
+        runners = [tasks.loop()] if run_background else []
+        if run_background and ctx.env.training_in_process:
+            runners.append(tasks.training_loop())
         for runner in runners:
             runner.start()
         try:

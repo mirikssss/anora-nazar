@@ -1,0 +1,31 @@
+# nginx на хосте: /etc/nginx/sites-available/nazar.clusteros.co.uz, ссылка в sites-enabled, `nginx -t && nginx -s reload`.
+# Сертификат: `certbot --nginx -d nazar.clusteros.co.uz` (или wildcard *.clusteros.co.uz, если он уже есть на сервере).
+# Порт — STAND_PORT из deploy/stand/.env.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name nazar.clusteros.co.uz;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name nazar.clusteros.co.uz;
+
+    ssl_certificate     /etc/letsencrypt/live/nazar.clusteros.co.uz/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/nazar.clusteros.co.uz/privkey.pem;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    client_max_body_size 1m;
+
+    location / {
+        proxy_pass http://127.0.0.1:18480;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+}

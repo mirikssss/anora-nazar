@@ -19,14 +19,16 @@ Approver = Annotated[StaffPrincipal, Depends(require_permission("policy.approve"
 
 
 class EditableThreshold(BaseModel):
+    """Порог (число) или переключатель (true/false, например сеть кредиторов)."""
+
     path: str
-    value: float
+    value: bool | float
 
 
 class ProposalOut(BaseModel):
     proposal_id: UUID
     base_version: str
-    changes: dict[str, float]
+    changes: dict[str, bool | float]
     reason: str
     proposed_by: str
     proposed_at: datetime
@@ -43,14 +45,16 @@ class PolicyOverviewOut(BaseModel):
 
 
 class ProposalIn(BaseModel):
-    changes: dict[str, float] = Field(min_length=1, max_length=20)
+    changes: dict[str, bool | float] = Field(min_length=1, max_length=20)
     reason: str = Field(min_length=3, max_length=2000)
 
 
-def _value(content: dict[str, Any], path: str) -> float | None:
+def _value(content: dict[str, Any], path: str) -> bool | float | None:
     node: Any = content
     for part in path.split("."):
         node = node.get(part) if isinstance(node, dict) else None
+    if isinstance(node, bool):
+        return node
     return float(node) if isinstance(node, int | float) else None
 
 

@@ -1,7 +1,8 @@
 # Обучение и выпуск моделей. Значения согласованы владельцем 11.10.2026.
 # Правка — новая версия файла; версия и параметры попадают в запись обучения каждой модели.
-version: scoring-config-2
-feature_set: fs-3
+# scoring-config-3 (И4): набор fs-4 с признаками сети; модели с группой network обучаются двумя вариантами.
+version: scoring-config-3
+feature_set: fs-4
 
 # Скользящая проверка по времени (Блок 3, «Валидация»): последние test_span меток канала делятся на folds окон;
 # каждое окно предсказывает модель, обученная только на более раннем. Из обучения окна убирается всё, что связано
@@ -34,6 +35,7 @@ lightgbm:                       # сильнее регуляризация по
   bagging_fraction: 0.8
   bagging_freq: 1
   seed: 20261011
+  num_threads: 2                # предложено: обучение в песочнице не забирает все ядра у решений
   verbose: -1
 boosting:
   max_rounds: 600               # согласовано владельцем 11.10.2026
@@ -77,9 +79,17 @@ monotone:
   employer_age_days: -1
   employer_headcount_growth: 1
   employer_cohort_income_alarm_share: 1
+  net_pinfl_lenders_1h: 1         # И4, сеть: больше чужих кредиторов и людей — не ниже риск
+  net_pinfl_lenders_7d: 1
+  net_phone_people_24h: 1
+  net_phone_people_30d: 1
+  net_device_people_30d: 1
+  net_supplier_borrowers_30d: 1
+  net_supplier_lenders_30d: 1
+  net_confirmed_match: 1
 
-models:                         # Блок 3: F1 в Т1, F2 в Т1 и Т4 с признаком канала, F3 в Т4
-  - {name: f1-t1, typology: F1, points: [T1], groups: [context, zone1, zone2, zone3], calibrate_by_channel: false}
-  - {name: f2, typology: F2, points: [T1, T4], groups: [context, zone1, zone2, zone3], calibrate_by_channel: true}
-  - {name: f3-t4, typology: F3, points: [T4], groups: [context, zone2, zone3], calibrate_by_channel: false}
+models:                         # Блок 3: F1 в Т1, F2 в Т1 и Т4 с признаком канала, F3 в Т4; network — вариант «-net»
+  - {name: f1-t1, typology: F1, points: [T1], groups: [context, zone1, zone2, zone3, network], calibrate_by_channel: false}
+  - {name: f2, typology: F2, points: [T1, T4], groups: [context, zone1, zone2, zone3, network], calibrate_by_channel: true}
+  - {name: f3-t4, typology: F3, points: [T4], groups: [context, zone2, zone3, network], calibrate_by_channel: false}
 f2_mode: per_channel            # ревью D: общая F2 чуть хуже раздельных на обоих каналах — раздельные (11.10.2026)

@@ -6,8 +6,9 @@ from dataclasses import dataclass
 from typing import Literal
 
 Missing = Literal["not_applicable", "unknown", "source_unavailable"]
-Group = Literal["context", "zone1", "zone2", "zone3"]
+Group = Literal["context", "zone1", "zone2", "zone3", "network"]
 FeaturePoint = Literal["T1", "T4"]
+FeatureFieldPoints = tuple[FeaturePoint, ...]
 
 
 @dataclass(frozen=True)
