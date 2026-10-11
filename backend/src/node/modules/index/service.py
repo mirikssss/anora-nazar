@@ -202,7 +202,7 @@ def _coordination(
     recent_from = as_of - timedelta(days=rules.window_days)
     background_windows = (index.window_days - rules.window_days) / rules.window_days
     signals = []
-    for kind, (key, display) in sorted(repository.own_attributes(session, application_id, rules.roles).items()):
+    for kind, (key, display) in sorted(repository.own_attributes(session, application_id, rules.roles, as_of).items()):
         times = repository.role_times(session, realm.visible_ids, kind, key, since, as_of)
         prior = _prior_pace(session, realm, kind, since, recent_from, background_windows)
         signals.append(coordination_signal(rules, index, kind, display, times, prior, as_of))
@@ -233,7 +233,7 @@ def device_subjects(
     session: Session, realm: RealmContext, application_id: UUID, as_of: datetime, days: int
 ) -> int | None:
     """Сколько разных людей подавали заявки с устройством этой заявки за days дней."""
-    own = repository.own_attributes(session, application_id, ["device"]).get("device")
+    own = repository.own_attributes(session, application_id, ["device"], as_of).get("device")
     if own is None:
         return None
     pair = ("device", own[0])
@@ -272,7 +272,7 @@ def concentrations(
     session: Session, realm: RealmContext, application_id: UUID, as_of: datetime, params: ConcentrationParams
 ) -> RoleConcentrations:
     """Концентрации ролей программной заявки: поставщик в филиале, сотрудник, помощник (Блок 3, зона 3)."""
-    own = repository.own_attributes(session, application_id, ["branch", "employee", "helper", "supplier"])
+    own = repository.own_attributes(session, application_id, ["branch", "employee", "helper", "supplier"], as_of)
     if "supplier" not in own:
         return RoleConcentrations()
     ids, since = realm.visible_ids, as_of - timedelta(days=params.window_days)

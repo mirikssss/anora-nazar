@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from node.modules.features import service as features
 from node.modules.labels import service as labels
 from node.modules.policy.domain import Policy
+from node.modules.quality import point_in_time
 from node.modules.quality import service as quality
 from node.modules.realms.domain import RealmContext
 from node.modules.scoring import repository
@@ -60,7 +61,9 @@ def run(
         if version is not None:
             repository.add(session, version)
             versions.append(version)
+    timing = point_in_time.check(session, realm, policy, index_key, cfg.point_in_time_sample, int(cfg.lightgbm["seed"]))
     report = {
+        "point_in_time": timing.as_dict(),
         "config": cfg.version,
         "feature_set": cfg.feature_set,
         "cutoff": cutoff.isoformat(),

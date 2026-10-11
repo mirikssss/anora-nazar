@@ -7,7 +7,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
 import lightgbm as lgb
@@ -29,6 +29,7 @@ class Split:
     calibration: list[Example]
     test: list[Example]
     unlabeled_test: list[Example]
+    isolation: dict[str, int]
 
 
 @dataclass(frozen=True)
@@ -56,16 +57,35 @@ def target(example: Example, typology: str, weak_weight: float) -> tuple[int, fl
     return 0, weak_weight if weak_only else 1.0
 
 
-def split(examples: list[Example], spec: ModelSpec, cfg: TrainingConfig) -> Split:
-    """Старшие месяцы — обучение, затем калибровка, последние — тест. Схемы и поставщики теста не попадают
-    в обучение (разбиение по группам, Блок 3)."""
+def groups(examples: list[Example]) -> dict[UUID, UUID]:
+    """Связные группы заявок по общим идентификаторам (человек, телефон, устройство, адрес, дело) — union-find."""
+    parent: dict[UUID, UUID] = {e.application_id: e.application_id for e in examples}
+
+    def root(node: UUID) -> UUID:
+        while parent[node] != node:
+            parent[node] = parent[parent[node]]
+            node = parent[node]
+        return node
+
+    owner: dict[str, UUID] = {}
+    for e in examples:
+        for key in e.identifiers:
+            other = owner.setdefault(key, e.application_id)
+            parent[root(e.application_id)] = root(other)
+    return {app: root(app) for app in parent}
+
+
+def split(examples: list[Example], spec: ModelSpec, cfg: TrainingConfig, *, all_test_groups: bool = False) -> Split:
+    """Старшие месяцы — обучение, затем калибровка, последние — тест; границы времени — внутри канала, метки
+    каналов созревают по-разному. Строго: в обучение не попадает ни одна заявка из одной группы с мошенниками
+    теста (общий человек, телефон, устройство, адрес или дело) и ни один поставщик тестовых схем.
+    all_test_groups=True — изоляция от групп всех заявок теста, включая честные (проверка на пределе строгости)."""
     scoped = [e for e in examples if e.point in spec.points]
     labeled = [e for e in scoped if target(e, spec.typology, cfg.weak_negative_weight) is not None]
     if not labeled:
-        return Split([], [], [], [])
+        return Split([], [], [], [], {})
     phase = {}
     for channel in {e.channel for e in labeled}:
-        # метки каналов созревают по-разному: границы времени — внутри канала
         own = [e for e in labeled if e.channel == channel]
         train_end = own[int(len(own) * cfg.split.train)].as_of
         cal_end = own[min(int(len(own) * (cfg.split.train + cfg.split.calibration)), len(own) - 1)].as_of
@@ -77,22 +97,34 @@ def split(examples: list[Example], spec: ModelSpec, cfg: TrainingConfig) -> Spli
 
     test = [e for e in labeled if stage(e) == "test"]
     labeled_ids = {e.application_id for e in labeled}
-    test_positive = [e for e in test if target(e, spec.typology, cfg.weak_negative_weight) == (1, 1.0)]
-    cases = {label.case_key for e in test_positive for label in e.labels if label.case_key}
-    suppliers = {e.supplier for e in test_positive if e.supplier}
+    group_of = groups(scoped)
+    frauds = [e for e in test if target(e, spec.typology, cfg.weak_negative_weight) == (1, 1.0)]
+    test_groups = {group_of[e.application_id] for e in (test if all_test_groups else frauds)}
+    fraud_suppliers = {e.supplier for e in frauds if e.supplier}
 
     def isolated(e: Example) -> bool:
-        return e.supplier not in suppliers and not any(label.case_key in cases for label in e.labels)
+        return group_of[e.application_id] not in test_groups and e.supplier not in fraud_suppliers
 
+    before = [e for e in labeled if stage(e) != "test"]
+    kept = [e for e in before if isolated(e)]
+    sizes: dict[UUID, int] = {}
+    for app in group_of.values():
+        sizes[app] = sizes.get(app, 0) + 1
     return Split(
-        train=[e for e in labeled if stage(e) == "train" and isolated(e)],
-        calibration=[e for e in labeled if stage(e) == "calibration" and isolated(e)],
+        train=[e for e in kept if stage(e) == "train"],
+        calibration=[e for e in kept if stage(e) == "calibration"],
         test=test,
         unlabeled_test=[
             e
             for e in scoped
             if e.application_id not in labeled_ids and e.channel in phase and e.as_of >= phase[e.channel][1]
         ],
+        isolation={
+            "excluded_from_training": len(before) - len(kept),
+            "test_groups": len(test_groups),
+            "largest_group": max(sizes.values(), default=0),
+            "held_out_fraud_suppliers": len(fraud_suppliers),
+        },
     )
 
 
@@ -143,7 +175,14 @@ def predict(fitted: Fitted, examples: list[Example]) -> np.ndarray:
 def _metrics(
     y: np.ndarray, ranking: np.ndarray, cfg: TrainingConfig, probabilities: np.ndarray | None
 ) -> dict[str, Any]:
-    return metrics(y, ranking, review_share=cfg.review_share, fpr=cfg.fpr, probabilities=probabilities)
+    return metrics(
+        y,
+        ranking,
+        review_shares=cfg.review_shares,
+        fpr=cfg.fpr,
+        probabilities=probabilities,
+        bootstrap=(cfg.bootstrap_resamples, int(cfg.lightgbm["seed"])),
+    )
 
 
 def _evaluate(fitted: Fitted, examples: list[Example], spec: ModelSpec, cfg: TrainingConfig) -> dict[str, Any]:
@@ -180,6 +219,8 @@ def report(
         "rules_graph_baseline": _metrics(y, baseline, cfg, None),
         "per_application": _evaluate(per_application, data.test, spec, cfg) if per_application else None,
         "with_graph": _evaluate(fitted, data.test, spec, cfg),
+        # сеть кредиторов подключается в И4; тот же тест и тот же бюджет проверки
+        "with_graph_and_network": {"status": "network_not_connected"},
     }
     on_day = data.test[-1].as_of.date() if data.test else None
     load_set = data.test + data.unlabeled_test
@@ -201,6 +242,7 @@ def report(
             "test_from": data.test[0].as_of.isoformat() if data.test else None,
             "test_to": data.test[-1].as_of.isoformat() if data.test else None,
             "calibration_source": fitted.calibration["source"],
+            **data.isolation,
         },
         "test": ablation["with_graph"],
         "by_channel": _by_channel(fitted, data.test, spec, cfg),
@@ -223,6 +265,18 @@ def report(
     if separate:
         result["f2_per_channel"] = separate
     return result
+
+
+def _all_groups_check(examples: list[Example], spec: ModelSpec, cfg: TrainingConfig) -> dict[str, Any]:
+    """Предельная строгость: обучение изолировано от групп всех заявок теста. Если позитивов не остаётся —
+    это ограничение объёма данных, а не повод ослаблять проверку."""
+    data = split(examples, spec, cfg, all_test_groups=True)
+    fitted = fit(data, spec, cfg, feature_names(spec))
+    positives = int(_xy(data.train, feature_names(spec), spec, cfg)[1].sum())
+    result: dict[str, Any] = {"train": len(data.train), "positives_train": positives, **data.isolation}
+    if fitted is None:
+        return result | {"status": "insufficient_labels"}
+    return result | {"status": "trained", "test": _evaluate(fitted, data.test, spec, cfg)}
 
 
 def to_version(
@@ -249,7 +303,14 @@ def train_spec(
     data = split(examples, spec, cfg)
     fitted = fit(data, spec, cfg, feature_names(spec))
     if fitted is None:
-        return None, {"model": spec.name, "skipped": "insufficient_labels", "train": len(data.train)}
+        positives = int(_xy(data.train, feature_names(spec), spec, cfg)[1].sum())
+        return None, {
+            "model": spec.name,
+            "skipped": "insufficient_labels",
+            "train": len(data.train),
+            "positives_train": positives,
+            **data.isolation,
+        }
     variants: dict[str, Fitted | None] = {
         "per_application": fit(data, spec, cfg, feature_names(spec, frozenset({"zone2"})))
     }
@@ -260,9 +321,11 @@ def train_spec(
                 [e for e in data.calibration if e.channel == channel],
                 [e for e in data.test if e.channel == channel],
                 [],
+                data.isolation,
             )
             variants[f"channel:{channel}"] = fit(only, spec, cfg, feature_names(spec))
     summary = report(spec, data, fitted, variants, cfg, timezone)
+    summary["strict_all_groups"] = _all_groups_check(examples, spec, cfg)
     version = to_version(spec, fitted, cfg, cutoff, summary, now)
     summary["model_version_id"] = str(version.id)
     return version, summary

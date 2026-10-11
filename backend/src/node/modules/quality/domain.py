@@ -36,18 +36,59 @@ def recall_above(y: np.ndarray, scores: np.ndarray, threshold: float) -> float |
     return round(float(((scores > threshold) & (y == 1)).sum()) / positives, 4)
 
 
+def review_budget(y: np.ndarray, ranking: np.ndarray, share: float) -> dict[str, Any]:
+    """Что даёт ручная проверка доли share заявок: сколько проверок, какая доля фрода поймана, сколько впустую."""
+    flagged = ranking > threshold_at_share(ranking, share)
+    reviewed = int(flagged.sum())
+    caught = int((flagged & (y == 1)).sum())
+    precision = round(caught / reviewed, 4) if reviewed else None
+    return {
+        "reviewed": reviewed,
+        "recall": recall_above(y, ranking, threshold_at_share(ranking, share)),
+        "precision": precision,
+        "false_review_share": None if precision is None else round(1 - precision, 4),
+    }
+
+
+def pr_auc_interval(y: np.ndarray, ranking: np.ndarray, resamples: int, seed: int) -> list[float] | None:
+    """95 % доверительный интервал PR-AUC бутстрепом по заявкам теста: при десятке позитивов он широкий."""
+    rng = np.random.default_rng(seed)
+    values = []
+    for _ in range(resamples):
+        index = rng.integers(0, y.size, y.size)
+        if 0 < y[index].sum() < y.size:
+            values.append(average_precision_score(y[index], ranking[index]))
+    if not values:
+        return None
+    low, high = np.quantile(values, [0.025, 0.975])
+    return [round(float(low), 4), round(float(high), 4)]
+
+
 def metrics(
-    y: np.ndarray, ranking: np.ndarray, *, review_share: float, fpr: float, probabilities: np.ndarray | None
+    y: np.ndarray,
+    ranking: np.ndarray,
+    *,
+    review_shares: list[float],
+    fpr: float,
+    probabilities: np.ndarray | None,
+    bootstrap: tuple[int, int] | None = None,
 ) -> dict[str, Any]:
     """Ранжирующие метрики — по сырому баллу: изотоническая калибровка ступенчатая и даёт много равных значений.
-    Мера Брайера — по калиброванной вероятности."""
+    Мера Брайера — по калиброванной вероятности. Случайный ранжир даёт PR-AUC, равный доле позитивов."""
     positives = int(y.sum())
-    result: dict[str, Any] = {"applications": int(y.size), "positives": positives}
+    rate = round(positives / y.size, 5) if y.size else None
+    result: dict[str, Any] = {
+        "applications": int(y.size),
+        "positives": positives,
+        "positive_rate": rate,
+        "random_pr_auc": rate,
+    }
     if positives in (0, y.size):
-        return result | {"pr_auc": None, "recall_at_review_share": None, "recall_at_fpr": None, "brier": None}
+        return result | {"pr_auc": None, "pr_auc_ci95": None, "review": {}, "recall_at_fpr": None, "brier": None}
     return result | {
         "pr_auc": round(float(average_precision_score(y, ranking)), 4),
-        "recall_at_review_share": recall_above(y, ranking, threshold_at_share(ranking, review_share)),
+        "pr_auc_ci95": None if bootstrap is None else pr_auc_interval(y, ranking, *bootstrap),
+        "review": {f"{share:.0%}": review_budget(y, ranking, share) for share in review_shares},
         "recall_at_fpr": recall_above(y, ranking, threshold_at_fpr(y, ranking, fpr)),
         "brier": None if probabilities is None else round(float(np.mean((probabilities - y) ** 2)), 5),
     }

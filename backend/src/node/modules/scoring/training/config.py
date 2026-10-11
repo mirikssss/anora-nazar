@@ -36,7 +36,10 @@ class TrainingConfig(_Frozen):
     min_positives: int = Field(gt=0)
     min_calibration_positives: int = Field(gt=0)
     review_share: float = Field(gt=0, lt=1)
+    review_shares: list[float] = Field(min_length=1)
     fpr: float = Field(gt=0, lt=1)
+    bootstrap_resamples: int = Field(gt=0)
+    point_in_time_sample: int = Field(ge=0)
     age_bands: list[int]
     lightgbm: dict[str, Any]
     models: list[ModelSpec]

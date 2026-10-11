@@ -31,6 +31,7 @@ class Example:
     rules_score: float
     pinfl: str
     supplier: str | None
+    identifiers: frozenset[str]
     labels: tuple[Label, ...]
 
 
@@ -38,6 +39,18 @@ def _rules_score(level: str | None, values: dict[str, Value]) -> float:
     """Базовый уровень без ML (ревью D): уровень правил и графа, внутри уровня — вес редких связей."""
     weight = values.get("rare_links_weight")
     return LEVEL_RANK.get(level or "green", 0) + 0.01 * float(weight or 0)
+
+
+def identifiers(snapshot: ApplicationSnapshot, labels: list[Label]) -> frozenset[str]:
+    """Что связывает заявки в одну группу для строгого разбиения: человек, его идентификаторы, дело."""
+    applicant = snapshot.applicant
+    keys = {f"pinfl:{applicant.pinfl}", f"phone:{applicant.phone}"}
+    if applicant.device_id:
+        keys.add(f"device:{applicant.device_id}")
+    if applicant.address:
+        keys.add(f"address:{' '.join(applicant.address.lower().split())}")
+    keys |= {f"case:{label.case_key}" for label in labels if label.case_key}
+    return frozenset(keys)
 
 
 def build(session: Session, realm: RealmContext, cutoff: datetime, policy: Policy, index_key: bytes) -> list[Example]:
@@ -65,6 +78,7 @@ def build(session: Session, realm: RealmContext, cutoff: datetime, policy: Polic
                 rules_score=_rules_score(decision.level, values),
                 pinfl=snapshot.applicant.pinfl,
                 supplier=snapshot.program.supplier_inn if snapshot.program else None,
+                identifiers=identifiers(snapshot, known.get(decision.application_id, [])),
                 labels=tuple(known.get(decision.application_id, [])),
             )
         )

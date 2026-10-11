@@ -10,8 +10,13 @@ from node.modules.quality.domain import metrics, predictive_equality, threshold_
 def test_recall_at_review_share_and_fpr() -> None:
     y = np.array([1, 1, 0, 0, 0, 0, 0, 0, 0, 0])
     scores = np.array([0.9, 0.2, 0.8, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
-    result = metrics(y, scores, review_share=0.2, fpr=0.2, probabilities=scores)
-    assert result["recall_at_review_share"] == 0.5, "верхние 20 % — 0.9 и 0.8, пойман один из двух"
+    result = metrics(y, scores, review_shares=[0.2], fpr=0.2, probabilities=scores, bootstrap=(200, 1))
+    review = result["review"]["20%"]
+    assert review["recall"] == 0.5, "верхние 20 % — 0.9 и 0.8, пойман один из двух"
+    assert review["precision"] == 0.5 and review["false_review_share"] == 0.5
+    assert result["random_pr_auc"] == 0.2
+    low, high = result["pr_auc_ci95"]
+    assert 0 <= low <= result["pr_auc"] <= high <= 1
     assert result["recall_at_fpr"] == 1.0, "выше 0.1 — один негатив из восьми (12,5 % ≤ 20 %) и оба позитива"
     assert 0 < result["pr_auc"] <= 1
     assert result["brier"] is not None
@@ -19,8 +24,8 @@ def test_recall_at_review_share_and_fpr() -> None:
 
 
 def test_metrics_without_positives_are_empty_not_zero() -> None:
-    result = metrics(np.zeros(5), np.ones(5) * 0.1, review_share=0.2, fpr=0.05, probabilities=None)
-    assert result["pr_auc"] is None and result["recall_at_review_share"] is None
+    result = metrics(np.zeros(5), np.ones(5) * 0.1, review_shares=[0.2], fpr=0.05, probabilities=None)
+    assert result["pr_auc"] is None and result["review"] == {}
 
 
 def test_predictive_equality_gap_and_worst_day() -> None:

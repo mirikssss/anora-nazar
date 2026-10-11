@@ -132,11 +132,17 @@ def kind_totals(
     return int(row[0]), int(row[1])
 
 
-def own_attributes(session: Session, application_id: UUID, kinds: Iterable[str]) -> dict[str, tuple[str, str]]:
-    """Атрибуты заявки по видам из последней версии: вид → (ключ, маска)."""
+def own_attributes(
+    session: Session, application_id: UUID, kinds: Iterable[str], as_of: datetime
+) -> dict[str, tuple[str, str]]:
+    """Атрибуты заявки по видам из последней версии, полученной к as_of: вид → (ключ, маска)."""
     rows = session.execute(
         select(Occurrence.attr_kind, Occurrence.attr_key, Occurrence.attr_display)
-        .where(Occurrence.application_id == application_id, Occurrence.attr_kind.in_(list(kinds)))
+        .where(
+            Occurrence.application_id == application_id,
+            Occurrence.attr_kind.in_(list(kinds)),
+            Occurrence.received_at <= as_of,
+        )
         .order_by(Occurrence.application_version)
     )
     return {kind: (key, display) for kind, key, display in rows}

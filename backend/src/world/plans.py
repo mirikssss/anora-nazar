@@ -4,13 +4,13 @@
 """
 
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from random import Random
 from typing import Literal
 
 from world.config import BoundedLogNormal, IdentityKind, SessionParams, SignalProbabilities, WorldParams
 from world.identifiers import Identifiers
-from world.organizations import CatalogItem, Organizations
+from world.organizations import CatalogItem, Organizations, registration_date
 from world.period import Calendar
 from world.population import Person, Population
 from world.records import Channel, EmployeeRecord, HelperRecord, RoleKind, SupplierRecord, Typology
@@ -166,6 +166,18 @@ class PlanFactory:
             employee=self.orgs.employee_for(self.rng, person.district),
             item=chosen,
         )
+
+    def honest_roles(self, roles: ProgramRoles, district: str, day: date) -> ProgramRoles:
+        """Ловушка: честная заявка у молодого поставщика, зарегистрированного незадолго до неё."""
+        if not chance(self.rng, self.params.honest.young_supplier_share):
+            return roles
+        registered = registration_date(self.rng, self.params.organizations.registration_age_days, day, new=True)
+        return replace(roles, supplier=self.orgs.suppliers.add(roles.item.category, district, registered, pooled=False))
+
+    def honest_markup(self) -> float | None:
+        """Ловушка: честная заявка с высокой ценой — премиальный товар, а не схема."""
+        spec = self.params.honest.premium_price
+        return lognormal(self.rng, spec.markup) if chance(self.rng, spec.share) else None
 
     def program(
         self,

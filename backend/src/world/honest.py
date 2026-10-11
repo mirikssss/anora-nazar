@@ -36,17 +36,21 @@ def plan_program_batches(factory: PlanFactory, target: int) -> list[ApplicationP
         district = pick(rng, orgs.districts)
         helper = pick(rng, orgs.helpers_by_district[district.name])
         item = pick(rng, orgs.items)
-        roles = ProgramRoles(
-            helper=helper,
-            supplier=orgs.suppliers.pick(rng, district.name, item.category),
-            employee=orgs.employee_for(rng, district.name),
-            item=item,
-        )
         first_day = factory.calendar.window_start(rng, spec.days)
+        roles = factory.honest_roles(
+            ProgramRoles(
+                helper=helper,
+                supplier=orgs.suppliers.pick(rng, district.name, item.category),
+                employee=orgs.employee_for(rng, district.name),
+                item=item,
+            ),
+            district.name,
+            first_day,
+        )
         pools = [population.by_mahalla.get((district.name, helper.mahalla), ()), population.by_district[district.name]]
         for person in population.sample(rng, pools, between(rng, spec.size)):
             moment = factory.calendar.moment(rng, first_day, spec.days, night=False)
-            plans.append(factory.program(person, moment, factory.honest_signals(), roles))
+            plans.append(factory.program(person, moment, factory.honest_signals(), roles, factory.honest_markup()))
     return plans
 
 
@@ -58,7 +62,8 @@ def _single(factory: PlanFactory, channel: Channel, month: int) -> ApplicationPl
     if channel == "online":
         return factory.online(person, factory.calendar.moment(rng, first_day, days, night=signals.night), signals)
     moment = factory.calendar.moment(rng, first_day, days, night=False)
-    return factory.program(person, moment, signals, factory.usual_roles(person))
+    roles = factory.honest_roles(factory.usual_roles(person), person.district, moment.date())
+    return factory.program(person, moment, signals, roles, factory.honest_markup())
 
 
 def plan_singles(factory: PlanFactory, missing: dict[Channel, list[int]]) -> list[ApplicationPlan]:

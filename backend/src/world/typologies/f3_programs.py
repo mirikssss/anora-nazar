@@ -1,6 +1,7 @@
 """F3 — схема в программном займе.
 
-Один помощник хокима, поставщик и товар на всю схему; цена за единицу завышена против рынка. Часто поставщик
+Один помощник хокима, поставщик и товар на всю схему; цена за единицу обычно завышена против рынка, но часть
+схем идёт по рыночной цене (маскировка). Часто поставщик
 зарегистрирован незадолго до схемы, рекомендации помощника идут всплеском, заявитель не из его махалли,
 а за несколько месяцев до заявки у заявителя растут добровольные взносы ИНПС.
 """
@@ -34,6 +35,7 @@ def _scheme(factory: PlanFactory, key: str, size: int) -> list[ApplicationPlan]:
     helper = pick(rng, orgs.helpers_by_district[district.name])
     item = pick(rng, orgs.items)
     days = spec.burst_days if chance(rng, spec.helper_burst) else spec.spread_days
+    overpriced = chance(rng, spec.overpriced)  # маскировка: часть схем идёт по рыночной цене
     first_day = calendar.window_start(rng, days)
     if chance(rng, spec.new_supplier):
         registered = registration_date(rng, factory.params.organizations.registration_age_days, first_day, new=True)
@@ -52,7 +54,8 @@ def _scheme(factory: PlanFactory, key: str, size: int) -> list[ApplicationPlan]:
         signals = replace(signals, income_jump="voluntary" if chance(rng, spec.income_jump) else None)
         roles = ProgramRoles(helper, supplier, orgs.employee_for(rng, district.name), item)
         moment = calendar.moment(rng, first_day, days, night=False)
-        plan = factory.program(person, moment, signals, roles, markup=lognormal(rng, spec.overprice))
+        markup = lognormal(rng, spec.overprice) if overpriced else None
+        plan = factory.program(person, moment, signals, roles, markup=markup)
         plans.append(replace(plan, typology="F3", scheme_key=key, shared_roles=("helper", "supplier")))
     return plans
 

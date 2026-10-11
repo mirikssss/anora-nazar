@@ -216,9 +216,16 @@ class SignalProbabilities(_Params):
     amount_to_spending: LogNormal
 
 
+class PremiumPrice(_Params):
+    share: Probability
+    markup: LogNormal
+
+
 class Honest(SignalProbabilities):
     income_jump: Probability
     first_payment_missed: Probability
+    premium_price: PremiumPrice
+    young_supplier_share: Probability
 
 
 class CoercionParams(SignalProbabilities):
@@ -241,6 +248,7 @@ class NetworkParams(_Params):
 
 class ProgramSchemeParams(_Params):
     share_of_program: Probability
+    overpriced: Probability
     overprice: LogNormal
     new_supplier: Probability
     helper_burst: Probability

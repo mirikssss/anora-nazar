@@ -112,6 +112,8 @@ honest:                         # вероятности признаков у �
   amount_to_spending: {median: 1.0, sigma: 0.5}
   income_jump: 0.03
   first_payment_missed: 0.02    # добавлено генератором, ждёт согласования: ловушка — честный пропуск первого платежа
+  premium_price: {share: 0.03, markup: {median: 1.5, sigma: 0.1}}   # предложено: ловушка — честная высокая цена
+  young_supplier_share: 0.05    # предложено: ловушка — честная заявка у молодого поставщика
 
 fraud:
   f1:                           # воздействие на заёмщика, только онлайн
@@ -138,6 +140,7 @@ fraud:
     first_credit: 0.70
   f3:                           # схема в программном займе
     share_of_program: 0.015
+    overpriced: 0.70           # предложено: остальные схемы по рыночной цене (маскировка)
     overprice: {median: 1.6, sigma: 0.15}
     new_supplier: 0.60
     helper_burst: 0.60
