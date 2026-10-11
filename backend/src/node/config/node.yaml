@@ -1,0 +1,41 @@
+# Рабочие значения узла. Согласованы с владельцем 11.10.2026; секреты и адреса — только из окружения.
+version: node-config-1
+
+policy:
+  active_version: policy-v1
+
+permits:
+  reserve_ttl_seconds: 120          # резерв без итога → «неизвестно»
+
+queue:
+  max_lag_seconds: 10               # выше — запросы разрешений ждут (Блок 1)
+  watched_producers: [bank-sim]
+
+ingest:
+  version_gap_timeout_seconds: 60   # потом запрос снимка у владельца заявки
+
+audit:
+  checkpoint_interval_seconds: 600  # плюс по кнопке риск-менеджера
+
+realms:
+  sandbox_ttl_hours: 24             # без активности
+
+background:
+  tick_seconds: 1
+
+outbox:
+  batch_size: 100
+  subscribers:
+    - name: bank-sim
+      topics:
+        - application.reassessment_required
+        - decision.made
+        - hold.placed
+        - permit.reserved
+        - permit.finished
+
+http:
+  timeout_seconds: 5
+
+database:
+  pool_size: 10

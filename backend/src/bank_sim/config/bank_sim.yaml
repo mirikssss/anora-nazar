@@ -1,0 +1,23 @@
+# Рабочие значения имитатора банка. Секреты и адреса — только из окружения.
+version: bank-sim-config-1
+
+producer: bank-sim                # имя производителя событий в отметках очереди узла
+
+bureau:
+  lock_hours: 24                  # после выдачи бюро блокирует других кредиторов, № 3759 п. 20
+
+sandboxes:
+  ttl_hours: 24                   # как у узла
+
+background:
+  tick_seconds: 1
+  watermark_interval_seconds: 2   # чаще порога отставания узла (10 с)
+
+outbox:
+  batch_size: 100
+
+http:
+  timeout_seconds: 5
+
+database:
+  pool_size: 10

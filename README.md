@@ -17,4 +17,24 @@
 
 ## Запуск
 
-Описание появится вместе с кодом.
+Нужен Docker. Секреты для разработки создаёт скрипт, потом стенд поднимается одной командой:
+
+```bash
+./deploy/dev-env.sh
+```
+
+```bash
+docker compose up --build -d
+```
+
+| Сервис | Адрес | Документация API |
+| --- | --- | --- |
+| узел | http://localhost:8000 | http://localhost:8000/docs |
+| имитатор банка | http://localhost:8001 | http://localhost:8001/docs |
+| якорь журнала | http://localhost:8002 | http://localhost:8002/docs |
+
+Все тесты — юнит, интеграционные на PostgreSQL и сквозные против поднятого стенда:
+
+```bash
+docker compose --profile test run --build --rm tests
+```

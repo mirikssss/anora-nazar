@@ -1,0 +1,135 @@
+# Стенд разработки: docker compose up --build -d. Секреты — в .env (deploy/dev-env.sh).
+name: anora-nazar
+
+x-backend: &backend
+  build:
+    context: ./backend
+    target: runtime
+  image: anora-nazar-backend:dev
+  restart: unless-stopped
+
+x-health: &health
+  interval: 3s
+  timeout: 3s
+  retries: 40
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nazar
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:?}:5432"
+    healthcheck:
+      <<: *health
+      test: ["CMD-SHELL", "pg_isready -U nazar"]
+
+  keys:
+    <<: *backend
+    restart: "no"
+    user: root
+    command: >-
+      sh -c "python -m shared.keys /keys/private/node-signing.key /keys/public/node-public.key
+      && chown -R 10001 /keys"
+    volumes:
+      - node-private-key:/keys/private
+      - node-public-key:/keys/public
+
+  node:
+    <<: *backend
+    depends_on:
+      postgres: {condition: service_healthy}
+      keys: {condition: service_completed_successfully}
+    environment:
+      NODE_DATABASE_URL: postgresql+psycopg://nazar:${POSTGRES_PASSWORD}@postgres:5432/node
+      NODE_SIGNING_KEY_PATH: /keys/private/node-signing.key
+      NODE_SESSION_SECRET: ${NODE_SESSION_SECRET:?}
+      NODE_INDEX_KEY: ${NODE_INDEX_KEY:?}
+      NODE_BANK_SIM_URL: http://bank-sim:8001
+      NODE_BANK_SIM_API_KEY: ${BANK_SIM_API_KEY_NODE:?}
+      NODE_ANCHOR_URL: http://anchor:8002
+      NODE_ANCHOR_API_KEY: ${ANCHOR_API_KEY_NODE:?}
+      NODE_API_KEY_CONVEYOR: ${NODE_API_KEY_CONVEYOR:?}
+      NODE_API_KEY_CORE_BANKING: ${NODE_API_KEY_CORE_BANKING:?}
+      NODE_API_KEY_EVENTS: ${NODE_API_KEY_EVENTS:?}
+      NODE_API_KEY_REALMS: ${NODE_API_KEY_REALMS:?}
+    command: >-
+      sh -c "python -m node migrate && python -m node seed
+      && exec uvicorn node.main:app_factory --factory --host 0.0.0.0 --port 8000"
+    volumes:
+      - node-private-key:/keys/private:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/system/health')"]
+
+  anchor:
+    <<: *backend
+    depends_on:
+      postgres: {condition: service_healthy}
+      keys: {condition: service_completed_successfully}
+    environment:
+      ANCHOR_DATABASE_URL: postgresql+psycopg://nazar:${POSTGRES_PASSWORD}@postgres:5432/anchor
+      ANCHOR_NODE_PUBLIC_KEY_PATH: /keys/public/node-public.key
+      ANCHOR_API_KEY_NODE: ${ANCHOR_API_KEY_NODE:?}
+    command: >-
+      sh -c "python -m anchor migrate
+      && exec uvicorn anchor.main:app_factory --factory --host 0.0.0.0 --port 8002"
+    volumes:
+      - node-public-key:/keys/public:ro
+    ports:
+      - "127.0.0.1:8002:8002"
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/v1/system/health')"]
+
+  bank-sim:
+    <<: *backend
+    depends_on:
+      postgres: {condition: service_healthy}
+      node: {condition: service_healthy}
+    environment:
+      BANK_SIM_DATABASE_URL: postgresql+psycopg://nazar:${POSTGRES_PASSWORD}@postgres:5432/bank_sim
+      BANK_SIM_NODE_URL: http://node:8000
+      BANK_SIM_NODE_KEY_CONVEYOR: ${NODE_API_KEY_CONVEYOR:?}
+      BANK_SIM_NODE_KEY_CORE_BANKING: ${NODE_API_KEY_CORE_BANKING:?}
+      BANK_SIM_NODE_KEY_EVENTS: ${NODE_API_KEY_EVENTS:?}
+      BANK_SIM_NODE_KEY_REALMS: ${NODE_API_KEY_REALMS:?}
+      BANK_SIM_NODE_PUBLIC_KEY_PATH: /keys/public/node-public.key
+      BANK_SIM_API_KEY_NODE: ${BANK_SIM_API_KEY_NODE:?}
+    command: >-
+      sh -c "python -m bank_sim migrate && python -m bank_sim seed
+      && exec uvicorn bank_sim.main:app_factory --factory --host 0.0.0.0 --port 8001"
+    volumes:
+      - node-public-key:/keys/public:ro
+    ports:
+      - "127.0.0.1:8001:8001"
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/v1/system/health')"]
+
+  tests:
+    build:
+      context: ./backend
+      target: dev
+    image: anora-nazar-backend:test
+    profiles: [test]
+    depends_on:
+      postgres: {condition: service_healthy}
+      bank-sim: {condition: service_healthy}
+    environment:
+      TEST_POSTGRES_URL: postgresql+psycopg://nazar:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      E2E_NODE_URL: http://node:8000
+      E2E_BANK_SIM_URL: http://bank-sim:8001
+    command: ["pytest"]
+
+volumes:
+  pgdata:
+  node-private-key:
+  node-public-key:

@@ -1,1 +1,38 @@
-"""Сценарии использования модуля и границы транзакций."""
+"""Кнопки сбоев песочницы: потерять итог, узел недоступен, очередь отстаёт, повтор с другой суммой."""
+
+from datetime import datetime
+from uuid import UUID
+
+from sqlalchemy.orm import Session
+
+from bank_sim.modules.failures import repository
+from bank_sim.modules.failures.models import FailureFlags
+from bank_sim.modules.failures.schemas import Flags, FlagsPatch
+from shared.errors import UpstreamUnavailableError
+
+
+def flags(session: Session, realm_id: UUID) -> Flags:
+    row = repository.get(session, realm_id)
+    if row is None:
+        return Flags(lose_outcome=False, node_unavailable=False, queue_lag=False)
+    return Flags(lose_outcome=row.lose_outcome, node_unavailable=row.node_unavailable, queue_lag=row.queue_lag)
+
+
+def update(session: Session, realm_id: UUID, patch: FlagsPatch, now: datetime) -> Flags:
+    current = flags(session, realm_id).model_copy(update=patch.model_dump(exclude_none=True))
+    row = repository.get(session, realm_id)
+    if row is None:
+        repository.add(session, FailureFlags(realm_id=realm_id, updated_at=now, **current.model_dump()))
+    else:
+        row.lose_outcome, row.node_unavailable, row.queue_lag = (
+            current.lose_outcome,
+            current.node_unavailable,
+            current.queue_lag,
+        )
+        row.updated_at = now
+    return current
+
+
+def ensure_node_reachable(current: Flags) -> None:
+    if current.node_unavailable:
+        raise UpstreamUnavailableError("node_unavailable", "Узел недоступен: операция ждёт его восстановления")

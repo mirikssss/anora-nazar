@@ -1,0 +1,14 @@
+# Системы банка, которые ходят в узел. Ключи — только из окружения; права — по заметке 11 «Ядро».
+api_clients:
+  - name: bank-sim-conveyor
+    scopes: [assessments]
+    key_env: NODE_API_KEY_CONVEYOR
+  - name: bank-sim-core-banking
+    scopes: [permits]
+    key_env: NODE_API_KEY_CORE_BANKING
+  - name: bank-sim-events
+    scopes: [events]
+    key_env: NODE_API_KEY_EVENTS
+  - name: bank-sim-realms
+    scopes: [realms]
+    key_env: NODE_API_KEY_REALMS

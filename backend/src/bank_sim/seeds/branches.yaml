@@ -1,0 +1,8 @@
+# Филиалы и сотрудники имитатора для И1 (второй филиал — для главного сценария).
+# Названия — нейтральные; в И2 их заменит генератор синтетического мира.
+branches:
+  - {id: BR-01, name: Филиал 1, district: Район 1}
+  - {id: BR-02, name: Филиал 2, district: Район 2}
+employees:
+  - {id: EMP-01-1, branch_id: BR-01, display_name: Кредитный специалист филиала 1, role: credit_officer}
+  - {id: EMP-02-1, branch_id: BR-02, display_name: Кредитный специалист филиала 2, role: credit_officer}

@@ -29,3 +29,4 @@ backend/artifacts/
 # Редакторы
 .idea/
 .vscode/
+.local/

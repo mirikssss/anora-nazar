@@ -1,0 +1,50 @@
+# Политика решений. Значения согласованы с владельцем 11.10.2026.
+# Версия неизменна: правка — новый файл с новой версией; запись решения хранит версию и хеш файла.
+version: policy-v1
+reasons_version: reasons-v1
+
+assessment_validity:
+  online: {hours: 24}     # окно очереди бюро, № 3759 п. 20
+  program: {days: 7}      # выезд и заключение — до 5 рабочих дней
+
+index:
+  window_days: 90         # размер группы за 90 дней (Блок 3)
+  identity_kinds: [phone, device, address, employer]
+  hub_thresholds:         # больше этого числа разных людей — шумный хаб, группу не образует
+    phone: 10
+    device: 10
+    address: 30
+    employer: 50
+  marking_kinds: [pinfl, phone, device, address, employer]
+
+group:
+  min_independent_rare_links: 2
+  burst:
+    window_days: 10
+    min_applications: 5
+    min_ratio_to_background: 3
+  red_when:
+    min_independent_rare_links: 3
+    shared_roles: [employee, supplier]
+
+mandatory_rules:          # процесс останавливается по норме; узел только пишет факт
+  - {code: MANDATORY_SELF_BAN, check: self_ban_active}
+  - {code: MANDATORY_BUREAU_BLOCKED, check: bureau_blocked}
+  - {code: MANDATORY_BIOMETRY_FAILED, check: biometry_failed}
+  - {code: MANDATORY_PHONE_NOT_OWNED, check: phone_not_owned}
+
+product_rules:            # минимальный уровень (Блок 4, «Сведение в уровни»)
+  - {code: PRODUCT_CONFIRMED_CASE_IDENTIFIER, signal: confirmed_case_identifier, min_level: red}
+  - {code: PRODUCT_CLIENT_REPORTED_PRESSURE, signal: client_reported_pressure, min_level: red}
+  - {code: PRODUCT_PRICE_ABOVE_MARKET, signal: price_above_market, min_level: yellow}
+
+actions:                  # действие по точке, типологии ведущей причины и уровню
+  green: continue
+  rules:
+    - {point: T1, typology: F1, level: yellow, action: intent_check}
+    - {point: T1, typology: F1, level: red, action: pause_for_call}
+    - {point: T1, typology: F2, action: internal_review}
+    - {point: T1, typology: F3, action: internal_review}
+    - {point: T4, typology: F1, action: internal_review}
+    - {point: T4, typology: F2, action: internal_review}
+    - {point: T4, typology: F3, action: internal_review}
