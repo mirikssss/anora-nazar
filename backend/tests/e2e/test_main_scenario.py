@@ -1,4 +1,5 @@
-"""Главный сценарий И1: живой отзыв на правилах и индексе связей, без модели."""
+"""Главный сценарий: живой отзыв по индексу связей. Уровень связанной заявки — жёлтый или красный: красный даёт
+оценочная стоимость риска модели, если модели выпущены в общий мир."""
 
 import time
 
@@ -12,10 +13,9 @@ def test_live_revocation_by_linked_application(sandbox: Sandbox) -> None:
     a = sandbox.apply(online_draft("31111111111111", PHONE, device=DEVICE))
     assert a["last_decision"]["level"] == "green"
     assert a["last_decision"]["action"] == "continue"
-    assert any(r["code"] == "SYSTEM_NO_MODEL" for r in a["last_decision"]["reasons"])
 
     b = sandbox.apply(online_draft("32222222222222", PHONE, branch="BR-02", employee="EMP-02-1", device=DEVICE))
-    assert b["last_decision"]["level"] == "yellow"
+    assert b["last_decision"]["level"] in ("yellow", "red")
     assert b["last_decision"]["action"] == "internal_review"
     assert a["id"] in b["last_decision"]["marked_applications"]
 
@@ -25,7 +25,7 @@ def test_live_revocation_by_linked_application(sandbox: Sandbox) -> None:
     assert refused["refusal"]["details"]["cause"]["trigger_application"] == b["id"]
 
     reassessed = sandbox.reassess(a["id"])
-    assert reassessed["last_decision"]["level"] == "yellow"
+    assert reassessed["last_decision"]["level"] in ("yellow", "red")
     codes = {r["code"] for r in reassessed["last_decision"]["reasons"]}
     assert "GRAPH_RARE_SHARED_LINKS" in codes
 
@@ -35,7 +35,7 @@ def test_live_revocation_by_linked_application(sandbox: Sandbox) -> None:
 
     view = sandbox.node.get(f"/v1/applications/{a['id']}", headers=sandbox.as_staff("analyst-1")).json()
     assert view["holds"][0]["required_check"] == "internal_review"
-    assert view["holds"][0]["basis"][0]["code"] == "GRAPH_RARE_SHARED_LINKS"
+    assert "GRAPH_RARE_SHARED_LINKS" in {basis["code"] for basis in view["holds"][0]["basis"]}
 
 
 def test_control_branch_normal_link_keeps_level(sandbox: Sandbox) -> None:
@@ -58,6 +58,7 @@ def test_control_branch_normal_link_keeps_level(sandbox: Sandbox) -> None:
 
 def test_failure_buttons(sandbox: Sandbox) -> None:
     a = sandbox.apply(online_draft("35555555555555", "998904445566"))
+    b = sandbox.apply(online_draft("39999999999999", "998908889900"))
     flags = {"lose_outcome": True}
     sandbox.bank.patch("/v1/failures", json=flags, headers=sandbox.headers).raise_for_status()
     lost = sandbox.execute(a["id"])
@@ -72,8 +73,9 @@ def test_failure_buttons(sandbox: Sandbox) -> None:
     assert repeat["node_status_code"] == 409
     assert repeat["node_response"]["error"]["code"] == "idempotency_key_reused"
 
-    again = sandbox.execute(a["id"])
-    assert again["refusal"]["code"] == "operation_in_progress"
+    again = sandbox.try_execute(a["id"])
+    assert again.status_code == 409, "АБС не проводит исполненную операцию второй раз (контракт с узлом, ревью B)"
+    assert again.json()["error"]["code"] == "already_executed"
 
     sandbox.bank.patch(
         "/v1/failures", json={"lose_outcome": False, "node_unavailable": True}, headers=sandbox.headers
@@ -83,8 +85,13 @@ def test_failure_buttons(sandbox: Sandbox) -> None:
     )
     assert waiting.status_code == 503
     assert waiting.json()["error"]["code"] == "node_unavailable"
-    money_waits = sandbox.execute(a["id"])
+    money_waits = sandbox.execute(b["id"])
     assert money_waits["status"] == "waiting_node"
+
+    sandbox.bank.patch("/v1/failures", json={"node_unavailable": False}, headers=sandbox.headers).raise_for_status()
+    resumed = sandbox.execute(b["id"])
+    assert resumed["operation_key"] == money_waits["operation_key"], "повтор после сбоя — с тем же ключом операции"
+    assert resumed["status"] == "executed"
 
 
 def test_queue_lag_holds_money(sandbox: Sandbox) -> None:

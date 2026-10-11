@@ -9,6 +9,7 @@ from node.background import NodeTasks
 from node.context import NodeContext
 from node.model_registry import IDEMPOTENCY
 from node.modules.policy.service import PolicyRegistry
+from node.modules.scoring.service import ModelCache
 from node.routes import include_routers
 from node.settings import NodeEnv, load_config
 from shared.clock import Clock, SystemClock
@@ -33,6 +34,7 @@ def build_context(env: NodeEnv, clock: Clock) -> NodeContext:
         idempotency=IdempotencyStore(IDEMPOTENCY),
         bank=ServiceClient(env.bank_sim_url, env.bank_sim_api_key, timeout_seconds=timeout, name="bank-sim"),
         anchor=ServiceClient(env.anchor_url, env.anchor_api_key, timeout_seconds=timeout, name="anchor"),
+        models=ModelCache(),
     )
 
 

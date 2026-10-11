@@ -33,12 +33,15 @@ class Sandbox:
             .json()
         )
 
-    def execute(self, app_id: str, operation_type: str = "disbursement") -> dict[str, Any]:
-        response = self.bank.post(
+    def try_execute(self, app_id: str, operation_type: str = "disbursement") -> httpx.Response:
+        return self.bank.post(
             "/v1/core-banking/operations",
             headers=self.headers,
             json={"application_id": app_id, "operation_type": operation_type},
         )
+
+    def execute(self, app_id: str, operation_type: str = "disbursement") -> dict[str, Any]:
+        response = self.try_execute(app_id, operation_type)
         assert response.status_code == 201, response.text
         return response.json()
 

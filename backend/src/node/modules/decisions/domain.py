@@ -83,15 +83,58 @@ def _graph_reasons(inputs: DecisionInputs, bundle: PolicyBundle) -> list[Reason]
 
 
 def _model_reasons(inputs: DecisionInputs, bundle: PolicyBundle) -> list[Reason]:
-    if inputs.scoring.status == "no_model":
-        return [
-            bundle.reason(
-                "SYSTEM_NO_MODEL",
-                [{"reason": inputs.scoring.reason, "checked_models": inputs.scoring.checked_models}],
-                None,
-            )
-        ]
-    raise AssertionError("скоринг моделями подключается в И2")
+    """Жёлтый — калиброванная вероятность выше порога; красный — оценочная стоимость риска выше аппетита (ревью C)."""
+    scoring, model = inputs.scoring, bundle.policy.model
+    reasons: list[Reason] = []
+    if scoring.status == "no_model" or scoring.missing_typologies:
+        missing: dict[str, Any] = {
+            "reason": scoring.reason,
+            "checked_models": scoring.checked_models,
+            "missing_typologies": scoring.missing_typologies,
+        }
+        reasons.append(bundle.reason("SYSTEM_NO_MODEL", [missing], None))
+    if model is None:
+        return reasons
+    for score in scoring.scores:
+        risk_cost = score.probability * inputs.snapshot.loan.amount * model.loss_given_fraud[inputs.channel]
+        level: Level | None = None
+        if risk_cost >= model.risk_appetite:
+            level = "red"
+        elif score.probability >= model.yellow_probability[score.typology]:
+            level = "yellow"
+        if level is None:
+            continue
+        evidence: dict[str, Any] = {
+            "model_version_id": score.model_version_id,
+            "probability": score.probability,
+            "risk_cost_estimate": round(risk_cost),
+            "risk_cost_is_estimate": True,
+            "contributions": [c.model_dump(mode="json") for c in score.contributions],
+        }
+        reasons.append(bundle.reason(f"MODEL_{score.typology}_RISK", [evidence], level))
+    return reasons
+
+
+def _coordination_reasons(inputs: DecisionInputs, bundle: PolicyBundle) -> list[Reason]:
+    """Группа координации (ревью E): роль заявки работает необычно часто против своего обычного темпа."""
+    rules = bundle.policy.coordination
+    flagged = [c for c in inputs.graph.coordination if c.flagged]
+    if rules is None or not flagged:
+        return []
+    return [bundle.reason("GRAPH_COORDINATION_CLUSTER", [c.model_dump() for c in flagged], rules.level)]
+
+
+def _source_reasons(inputs: DecisionInputs, bundle: PolicyBundle) -> list[Reason]:
+    """Какие источники не ответили — видно в причинах; уровень это не поднимает (Блок 3)."""
+    missing = inputs.features.unavailable_sources
+    reasons = []
+    if missing:
+        reasons.append(bundle.reason("SYSTEM_SOURCE_UNAVAILABLE", [{"sources": missing}], None))
+    if "inps" in missing:
+        reasons.append(bundle.reason("SYSTEM_INCOME_NOT_CONFIRMED", [{"source": "inps"}], None))
+    if inputs.snapshot.program is not None and inputs.features.values.get("price_comparables_level", 0) is None:
+        reasons.append(bundle.reason("SYSTEM_PRICE_NOT_CHECKED", [{"item": inputs.snapshot.program.item_code}], None))
+    return reasons
 
 
 def decide(inputs: DecisionInputs, bundle: PolicyBundle) -> DecisionResult:
@@ -115,6 +158,8 @@ def decide(inputs: DecisionInputs, bundle: PolicyBundle) -> DecisionResult:
     ]
     reasons += _model_reasons(inputs, bundle)
     reasons += _graph_reasons(inputs, bundle)
+    reasons += _coordination_reasons(inputs, bundle)
+    reasons += _source_reasons(inputs, bundle)
 
     level = max_level([r.level for r in reasons if r.level is not None])
     leading = max(

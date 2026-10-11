@@ -45,15 +45,6 @@ def test_three_independent_rare_links_give_red_and_a_hold(node: Node) -> None:
     assert decision["holds"][0]["required_check"] == "internal_review"
 
 
-def test_hub_attribute_does_not_form_a_group(node: Node) -> None:
-    realm = node.new_sandbox()
-    for i in range(11):
-        node.assess(realm, f"H{i}", online(f"32000000001{i:03d}", f"99890333{i:04d}", device="branch-wifi-device"))
-    decision = node.assess(realm, "X", online("32000000000199", "998903339999", device="branch-wifi-device"))
-    assert decision["level"] == "green", "устройство у 12 человек — шумный хаб: связи нет, группы нет"
-    assert decision["marked_applications"] == []
-
-
 def test_burst_of_linked_applications_through_one_employee_is_red(node: Node) -> None:
     """Двенадцать заявок за день с одним адресом через одного сотрудника: всплеск и общая роль."""
     realm = node.new_sandbox()

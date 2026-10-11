@@ -52,3 +52,17 @@ class ReplayOut(BaseModel):
     policy_unchanged: bool
     stored: dict[str, Any]
     replayed: dict[str, Any]
+
+
+class ComparisonIn(BaseModel):
+    policy_version: str | None = Field(default=None, max_length=32)
+    model_version_ids: list[UUID] | None = Field(default=None, max_length=10)
+
+
+class ComparisonOut(BaseModel):
+    decision_id: UUID
+    policy_version: str
+    model_versions: list[str]
+    level_changed: bool
+    stored: dict[str, Any]
+    compared: dict[str, Any]

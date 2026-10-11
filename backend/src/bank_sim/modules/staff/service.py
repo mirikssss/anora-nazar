@@ -18,6 +18,14 @@ def seed(session: Session, seeds_dir: Path) -> None:
         repository.upsert(session, Employee, row)
 
 
+def upsert_world(session: Session, branches: list[dict[str, str]], employees: list[dict[str, str]]) -> None:
+    """Филиалы и сотрудники синтетического мира — тот же персонал, что в истории узла."""
+    for row in branches:
+        repository.upsert(session, Branch, row)
+    for row in employees:
+        repository.upsert(session, Employee, row)
+
+
 def branches(session: Session) -> list[tuple[Branch, list[Employee]]]:
     employees = repository.employees(session)
     return [(b, [e for e in employees if e.branch_id == b.id]) for b in repository.branches(session)]

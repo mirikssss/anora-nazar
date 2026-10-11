@@ -38,6 +38,7 @@ class IndexPolicy(_Frozen):
     identity_kinds: list[str]
     hub_thresholds: dict[str, int]
     marking_kinds: list[str]
+    max_hops: int | None = Field(default=None, gt=0)  # None — без ограничения (policy-v1)
 
 
 class BurstPolicy(_Frozen):
@@ -55,6 +56,28 @@ class GroupPolicy(_Frozen):
     min_independent_rare_links: int = Field(gt=0)
     burst: BurstPolicy
     red_when: GroupRedWhen
+
+
+class CoordinationPolicy(_Frozen):
+    """Группа координации (ревью E): концентрация роли во времени против её сглаженного обычного темпа."""
+
+    roles: list[str]
+    window_days: int = Field(gt=0)
+    min_applications: int = Field(gt=0)
+    min_ratio_to_pace: float = Field(gt=0)
+    prior_weight_windows: float = Field(gt=0)
+    level: Level | None
+
+
+class ModelPolicy(_Frozen):
+    """Источник «модель»: жёлтый — по калиброванной вероятности, красный — оценочная стоимость риска
+    (вероятность × сумма × доля невозвратной потери) выше аппетита банка (ревью C)."""
+
+    expected_typologies: dict[Point, list[Typology]]
+    yellow_probability: dict[Typology, float]
+    loss_given_fraud: dict[Channel, float]
+    risk_appetite: int = Field(gt=0)
+    top_contributions: int = Field(gt=0)
 
 
 class MandatoryRule(_Frozen):
@@ -86,6 +109,8 @@ class Policy(_Frozen):
     assessment_validity: AssessmentValidity
     index: IndexPolicy
     group: GroupPolicy
+    coordination: CoordinationPolicy | None = None
+    model: ModelPolicy | None = None
     mandatory_rules: list[MandatoryRule]
     product_rules: list[ProductRule]
     actions: Actions

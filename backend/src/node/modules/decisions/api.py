@@ -7,7 +7,14 @@ from fastapi import APIRouter, Depends
 
 from node.deps import Ctx, IdempotencyKey, Realm, require_permission, require_scope
 from node.modules.decisions import service
-from node.modules.decisions.schemas import AssessmentIn, DecisionOut, DecisionRecordOut, ReplayOut
+from node.modules.decisions.schemas import (
+    AssessmentIn,
+    ComparisonIn,
+    ComparisonOut,
+    DecisionOut,
+    DecisionRecordOut,
+    ReplayOut,
+)
 from node.modules.identity.domain import StaffPrincipal, SystemPrincipal
 
 router = APIRouter(prefix="/v1", tags=["Решения"])
@@ -41,3 +48,12 @@ def get_decision(decision_id: UUID, ctx: Ctx, realm: Realm, _: Viewer) -> Decisi
 def replay(decision_id: UUID, ctx: Ctx, realm: Realm, _: Viewer) -> ReplayOut:
     with ctx.db.transaction() as session:
         return ReplayOut.model_validate(service.replay(session, realm, decision_id, ctx.policies))
+
+
+@router.post("/decisions/{decision_id}/comparison", response_model=ComparisonOut)
+def compare(decision_id: UUID, body: ComparisonIn, ctx: Ctx, realm: Realm, _: Viewer) -> ComparisonOut:
+    with ctx.db.transaction() as session:
+        result = service.compare(
+            session, realm, decision_id, ctx.policies, ctx.models, body.policy_version, body.model_version_ids
+        )
+        return ComparisonOut.model_validate(result)

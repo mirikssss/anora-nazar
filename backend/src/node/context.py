@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from node.modules.decisions.service import AssessContext
 from node.modules.ingest.service import IntakeContext
 from node.modules.policy.service import PolicyRegistry
+from node.modules.scoring.service import ModelCache
 from node.settings import NodeConfig, NodeEnv
 from shared.clock import Clock
 from shared.crypto.signing import Signer
@@ -24,6 +25,7 @@ class NodeContext:
     idempotency: IdempotencyStore
     bank: ServiceClient
     anchor: ServiceClient
+    models: ModelCache
 
     @property
     def index_key(self) -> bytes:
@@ -35,4 +37,6 @@ class NodeContext:
         )
 
     def assessing(self) -> AssessContext:
-        return AssessContext(intake=self.intake(), bundle=self.policies.active, idempotency=self.idempotency)
+        return AssessContext(
+            intake=self.intake(), bundle=self.policies.active, idempotency=self.idempotency, models=self.models
+        )

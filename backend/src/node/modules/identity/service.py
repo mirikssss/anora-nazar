@@ -17,7 +17,7 @@ from node.modules.identity.domain import (
 )
 from node.modules.identity.models import StaffRole, StaffUser
 from shared.config import load_yaml
-from shared.errors import ConfigurationError, NotFoundError, UnauthorizedError
+from shared.errors import ConfigurationError, ForbiddenError, NotFoundError, UnauthorizedError
 
 
 def seed(session: Session, seeds_dir: Path) -> None:
@@ -92,3 +92,10 @@ def demo_login(session: Session, user_code: str, realm_id: UUID, secret: str) ->
 
 def list_roles(session: Session) -> list[tuple[StaffRole, list[StaffUser]]]:
     return repository.roles_with_users(session)
+
+
+def require_staff_permission(session: Session, user_code: str, permission: str) -> None:
+    """Для команд стенда: сотрудник существует и имеет право — как при входе через API."""
+    found = repository.user_with_role(session, user_code)
+    if found is None or permission not in found[1].permissions:
+        raise ForbiddenError("permission_required", f"У сотрудника {user_code} нет права «{permission}»")

@@ -23,6 +23,7 @@ from node.modules.policy.domain import PolicyBundle
 from node.modules.policy.service import PolicyRegistry
 from node.modules.realms.domain import RealmContext
 from node.modules.scoring import service as scoring
+from node.modules.scoring.service import ModelCache
 from shared.crypto.canonical_json import sha256_hex
 from shared.errors import ConflictError, NotFoundError, ValidationFailedError
 from shared.idempotency import IdempotencyStore
@@ -36,6 +37,7 @@ class AssessContext:
     intake: IntakeContext
     bundle: PolicyBundle
     idempotency: IdempotencyStore
+    models: ModelCache
 
 
 def _record(inputs: DecisionInputs, result: DecisionResult, bundle: PolicyBundle) -> dict[str, Any]:
@@ -48,6 +50,7 @@ def _record(inputs: DecisionInputs, result: DecisionResult, bundle: PolicyBundle
             "reasons_hash": bundle.catalog_hash,
             "feature_set": inputs.features.set_version,
             "models": [s.model_version_id for s in inputs.scoring.scores],
+            "shadow_models": [s.model_version_id for s in inputs.scoring.shadow],
         },
         "result": result.model_dump(mode="json"),
     }
@@ -84,17 +87,17 @@ def assess(
         )
     app = accepted.application
     policy = ctx.bundle.policy
-    vector, view = features.compute(session, realm, app.id, as_of, policy)
+    computed = features.compute(session, realm, app.id, body.point, body.snapshot, as_of, policy, ctx.intake.index_key)
     inputs = DecisionInputs(
         point=body.point,
         channel=body.snapshot.channel,
         as_of=as_of,
         application_version=body.application_version,
         snapshot=body.snapshot,
-        features=vector,
-        graph=view,
-        scoring=scoring.evaluate(session, body.point, vector.set_version),
-        signals={},
+        features=computed.vector,
+        graph=computed.graph,
+        scoring=scoring.evaluate(session, ctx.models, realm, computed.vector, policy.model),
+        signals=computed.signals,
     )
     result = decide(inputs, ctx.bundle)
     record = _record(inputs, result, ctx.bundle)
@@ -178,6 +181,38 @@ def get_record(session: Session, realm: RealmContext, decision_id: UUID) -> Deci
     return decision
 
 
+def compare(
+    session: Session,
+    realm: RealmContext,
+    decision_id: UUID,
+    registry: PolicyRegistry,
+    cache: ModelCache,
+    policy_version: str | None,
+    model_ids: list[UUID] | None,
+) -> dict[str, Any]:
+    """Сравнение версий: сохранённые входы решения через другую политику и (или) другие версии моделей."""
+    decision = get_record(session, realm, decision_id)
+    versions = decision.record["versions"]
+    bundle = registry.get(policy_version or versions["policy"])
+    inputs = DecisionInputs.model_validate(decision.record["inputs"])
+    if model_ids is not None:
+        if bundle.policy.model is None:
+            raise ValidationFailedError("policy_without_models", f"В политике {bundle.policy.version} нет моделей")
+        inputs = inputs.model_copy(
+            update={"scoring": scoring.rescore(session, cache, model_ids, inputs.features, bundle.policy.model)}
+        )
+    compared = decide(inputs, bundle).model_dump(mode="json")
+    stored = decision.record["result"]
+    return {
+        "decision_id": decision.id,
+        "policy_version": bundle.policy.version,
+        "model_versions": [s.model_version_id for s in inputs.scoring.scores],
+        "level_changed": compared["level"] != stored["level"],
+        "stored": stored,
+        "compared": compared,
+    }
+
+
 def replay(session: Session, realm: RealmContext, decision_id: UUID, registry: PolicyRegistry) -> dict[str, Any]:
     """Воспроизведение: та же чистая функция на сохранённых входах и действовавшей тогда политике."""
     decision = get_record(session, realm, decision_id)
@@ -193,3 +228,7 @@ def replay(session: Session, realm: RealmContext, decision_id: UUID, registry: P
         "stored": stored,
         "replayed": replayed,
     }
+
+
+def first_assessed(session: Session, realm_id: UUID) -> list[Decision]:
+    return repository.first_assessed(session, realm_id)

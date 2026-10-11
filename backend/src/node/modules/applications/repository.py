@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import and_, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -52,16 +52,26 @@ def mark(session: Session, realm_id: UUID, ids: list[UUID], cause: dict[str, Any
     return list(rows.scalars())
 
 
-def active_ids_of_subject(session: Session, realm_id: UUID, subject_key: str) -> list[UUID]:
-    return list(
-        session.scalars(
-            select(Application.id).where(
-                Application.realm_id == realm_id,
-                Application.subject_key == subject_key,
-                Application.status == ACTIVE,
-            )
-        )
+def _open(realm_id: UUID, now: datetime) -> Any:
+    """Открытая заявка своего контура: активна и её оценка ещё в сроке (или оценки ещё нет)."""
+    return and_(
+        Application.realm_id == realm_id,
+        Application.status == ACTIVE,
+        or_(Application.assessment_valid_until.is_(None), Application.assessment_valid_until > now),
     )
+
+
+def open_ids_of_subject(session: Session, realm_id: UUID, subject_key: str, now: datetime) -> list[UUID]:
+    return list(
+        session.scalars(select(Application.id).where(_open(realm_id, now), Application.subject_key == subject_key))
+    )
+
+
+def open_ids(session: Session, realm_id: UUID, ids: Iterable[UUID], now: datetime) -> set[UUID]:
+    wanted = list(set(ids))
+    if not wanted:
+        return set()
+    return set(session.scalars(select(Application.id).where(_open(realm_id, now), Application.id.in_(wanted))))
 
 
 def by_external(session: Session, realm_ids: tuple[UUID, ...], external_id: str) -> Application | None:

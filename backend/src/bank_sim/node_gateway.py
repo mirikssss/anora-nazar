@@ -6,6 +6,7 @@ from uuid import UUID
 import httpx
 
 from bank_sim.settings import BankEnv
+from shared.errors import ConfigurationError
 from shared.http import ServiceClient
 
 
@@ -18,6 +19,7 @@ class NodeGateway:
         self.core_banking = client(env.node_key_core_banking, "узел (АБС)")
         self.events = client(env.node_key_events, "узел (события)")
         self.realms = client(env.node_key_realms, "узел (песочницы)")
+        self._env, self._transport = env, transport
 
     def create_realm(self, realm_id: UUID) -> dict[str, Any]:
         return self.realms.call("POST", "/v1/realms", json={"id": str(realm_id)})
@@ -41,6 +43,18 @@ class NodeGateway:
 
     def send_watermarks(self, items: list[dict[str, Any]]) -> None:
         self.events.call("POST", "/v1/events/watermarks", json={"items": items})
+
+    def history(self, timeout_seconds: float) -> ServiceClient:
+        """Клиент прогона истории мира: отдельный ключ с правом history и долгий таймаут."""
+        if self._env.node_key_history is None:
+            raise ConfigurationError("Для прогона мира нужен BANK_SIM_NODE_KEY_HISTORY")
+        return ServiceClient(
+            self._env.node_url,
+            self._env.node_key_history,
+            timeout_seconds=timeout_seconds,
+            name="узел (история)",
+            transport=self._transport,
+        )
 
     def close(self) -> None:
         for c in (self.conveyor, self.core_banking, self.events, self.realms):

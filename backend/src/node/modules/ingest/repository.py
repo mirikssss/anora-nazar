@@ -1,10 +1,11 @@
 """Доступ к таблицам модуля."""
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy import delete, func, select
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.dialects.postgresql import distinct_on, insert
 from sqlalchemy.orm import Session
 
 from node.modules.ingest.models import (
@@ -134,3 +135,46 @@ def metric_summary(session: Session, realm_id: UUID) -> dict[str, Any]:
         "mark_latency_p95_ms": None if row[3] is None else round(float(row[3]), 3),
         "mark_latency_max_ms": None if row[4] is None else round(float(row[4]), 3),
     }
+
+
+def latest_payload(
+    session: Session,
+    realm_ids: tuple[UUID, ...],
+    type_: str,
+    as_of: datetime,
+    *,
+    subject_key: str | None = None,
+    entity_id: str | None = None,
+) -> dict[str, Any] | None:
+    """Последний полученный к as_of факт этого типа: поздняя правка не видна прошлым оценкам."""
+    stmt = select(SourceFact.payload).where(
+        SourceFact.realm_id.in_(realm_ids), SourceFact.type == type_, SourceFact.received_at <= as_of
+    )
+    if subject_key is not None:
+        stmt = stmt.where(SourceFact.subject_key == subject_key)
+    if entity_id is not None:
+        stmt = stmt.where(SourceFact.entity_id == entity_id)
+    payload: dict[str, Any] | None = session.scalar(
+        stmt.order_by(SourceFact.received_at.desc(), SourceFact.id.desc()).limit(1)
+    )
+    return payload
+
+
+def latest_payloads_by_subject(
+    session: Session, realm_ids: tuple[UUID, ...], type_: str, subjects: list[str], as_of: datetime
+) -> dict[str, dict[str, Any]]:
+    """Последний полученный к as_of факт этого типа по каждому человеку — одним запросом."""
+    if not subjects:
+        return {}
+    rows = session.execute(
+        select(SourceFact.subject_key, SourceFact.payload)
+        .where(
+            SourceFact.realm_id.in_(realm_ids),
+            SourceFact.type == type_,
+            SourceFact.received_at <= as_of,
+            SourceFact.subject_key.in_(subjects),
+        )
+        .ext(distinct_on(SourceFact.subject_key))
+        .order_by(SourceFact.subject_key, SourceFact.received_at.desc(), SourceFact.id.desc())
+    )
+    return {subject: payload for subject, payload in rows}

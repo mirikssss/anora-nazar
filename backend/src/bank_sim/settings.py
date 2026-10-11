@@ -19,6 +19,7 @@ class BankEnv(BaseSettings):
     node_key_core_banking: str
     node_key_events: str
     node_key_realms: str
+    node_key_history: str | None = None  # нужен только команде прогона мира
     node_public_key_path: Path
     api_key_node: str
     log_level: str = "INFO"
@@ -55,6 +56,12 @@ class DatabaseConfig(_Frozen):
     pool_size: int
 
 
+class HistoryConfig(_Frozen):
+    params_path: str
+    batch_size: int
+    timeout_seconds: float
+
+
 class BankConfig(_Frozen):
     version: str
     producer: str
@@ -64,6 +71,7 @@ class BankConfig(_Frozen):
     outbox: OutboxConfig
     http: HttpConfig
     database: DatabaseConfig
+    history: HistoryConfig
 
 
 def load_config(path: Path) -> BankConfig:

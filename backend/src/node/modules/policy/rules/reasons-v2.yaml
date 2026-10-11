@@ -1,0 +1,63 @@
+# Каталог кодов причин из сигналов Блоков 2–3. Тексты для людей — в модуле texts, не здесь.
+# v2: + причины моделей и группы координации (И2).
+version: reasons-v2
+reasons:
+  # обязательные правила № 3759
+  - {code: MANDATORY_SELF_BAN, source: rule, norm: "п. 18"}
+  - {code: MANDATORY_BUREAU_BLOCKED, source: rule, norm: "п. 19–20"}
+  - {code: MANDATORY_BIOMETRY_FAILED, source: rule, norm: "п. 6, 23"}
+  - {code: MANDATORY_PHONE_NOT_OWNED, source: rule, norm: "п. 5"}
+  # правила продукта
+  - {code: PRODUCT_CONFIRMED_CASE_IDENTIFIER, typology: F2, source: rule, norm: "п. 26"}
+  - {code: PRODUCT_CLIENT_REPORTED_PRESSURE, typology: F1, source: rule, norm: "п. 44"}
+  - {code: PRODUCT_PRICE_ABOVE_MARKET, typology: F3, source: rule, norm: "п. 26"}
+  # граф
+  - {code: GRAPH_RARE_SHARED_LINKS, typology: F2, source: graph, norm: "п. 26, 43"}
+  - {code: GRAPH_GROUP_BURST, typology: F2, source: graph, norm: "п. 26, 43"}
+  - {code: GRAPH_GROUP_SHARED_ROLE, typology: F2, source: graph, norm: "п. 26, 43"}
+  - {code: GRAPH_PROXIMITY_TO_CASE, typology: F2, source: graph, norm: "п. 26"}
+  - {code: GRAPH_COORDINATION_CLUSTER, typology: F2, source: graph, norm: "п. 26, 43"}
+  # зона 1
+  - {code: F1_ACCESS_RECOVERY_BEFORE_APPLICATION, typology: F1, source: model, norm: "п. 44"}
+  - {code: F1_NEW_DEVICE, typology: F1, source: model, norm: "п. 44"}
+  - {code: F1_DEVICE_SHARED_BY_CLIENTS, typology: F1, source: model, norm: "п. 38"}
+  - {code: F1_REMOTE_CONTROL_OR_CALL, typology: F1, source: model, norm: "п. 15"}
+  - {code: F1_AMOUNT_VS_SPENDING, typology: F1, source: model, norm: "п. 44"}
+  - {code: F1_FIRST_CREDIT, typology: F1, source: model, norm: "п. 44"}
+  - {code: F1_SELF_BAN_RECENTLY_LIFTED, typology: F1, source: model, norm: "п. 18"}
+  - {code: F1_BUREAU_LOCK_CONTEXT, typology: F1, source: model, norm: "п. 20"}
+  - {code: F1_NIGHT_APPLICATION, typology: F1, source: model, norm: "п. 44"}
+  - {code: F1_FILL_SPEED, typology: F1, source: model, norm: "п. 44"}
+  - {code: F1_FIRST_TRANSFER_CREDIT_SHARE, typology: F1, source: rule, norm: "п. 37"}
+  - {code: F1_NEW_RECIPIENT, typology: F1, source: rule, norm: "п. 37"}
+  # сеть
+  - {code: NET_PINFL_QUERIED_BY_LENDERS, typology: F1, source: network, norm: "п. 26"}
+  - {code: NET_PHONE_SHARED_ACROSS_PEOPLE, typology: F2, source: network, norm: "п. 26"}
+  - {code: NET_DEVICE_SHARED_ACROSS_PEOPLE, typology: F2, source: network, norm: "п. 26"}
+  - {code: NET_RECIPIENT_CARD_LINKED, typology: F1, source: network, norm: "п. 37"}
+  - {code: NET_CONFIRMED_CASE_MATCH, typology: F2, source: network, norm: "п. 26"}
+  - {code: NET_SUPPLIER_CONCENTRATION, typology: F3, source: network, norm: "п. 26"}
+  - {code: NET_SERIAL_REPEAT, typology: F3, source: network, norm: "п. 26"}
+  # зона 3
+  - {code: F3_PRICE_ABOVE_COMPARABLES, typology: F3, source: model, norm: "п. 26"}
+  - {code: F3_SUPPLIER_NEW, typology: F3, source: model, norm: "п. 26"}
+  - {code: F3_SUPPLIER_CONCENTRATION, typology: F3, source: model, norm: "п. 26"}
+  - {code: F3_EMPLOYEE_CONCENTRATION, typology: F3, source: model, norm: "п. 26"}
+  - {code: F3_HELPER_RECOMMENDATION_BURST, typology: F3, source: model, norm: "п. 26"}
+  - {code: F3_APPLICANT_OUTSIDE_HELPER_MAHALLA, typology: F3, source: model, norm: "п. 26"}
+  - {code: F3_APPLICANT_IS_STAFF, typology: F3, source: model, norm: "п. 26"}
+  - {code: F3_BATCH_ACCEPTANCE_ACTS, typology: F3, source: rule, norm: "п. 26"}
+  - {code: F3_INCOME_JUMP, typology: F3, source: model, norm: "п. 21"}
+  - {code: F3_VOLUNTARY_CONTRIBUTIONS_SHARE, typology: F3, source: model, norm: "п. 21"}
+  - {code: F3_NEW_EMPLOYER_HIRING_SURGE, typology: F3, source: model, norm: "п. 21"}
+  - {code: F3_DOUBLE_COLLATERAL, typology: F3, source: model, norm: "п. 26"}
+  # модели: вклад признаков — в evidence
+  - {code: MODEL_F1_RISK, typology: F1, source: model, norm: "п. 44"}
+  - {code: MODEL_F2_RISK, typology: F2, source: model, norm: "п. 26, 43"}
+  - {code: MODEL_F3_RISK, typology: F3, source: model, norm: "п. 26"}
+  # состояние источников и моделей
+  - {code: SYSTEM_NO_MODEL, source: model}
+  - {code: SYSTEM_NETWORK_UNAVAILABLE, source: network}
+  - {code: SYSTEM_SOURCE_UNAVAILABLE, source: rule}
+  - {code: SYSTEM_INCOME_NOT_CONFIRMED, typology: F3, source: rule}
+  - {code: SYSTEM_PRICE_NOT_CHECKED, typology: F3, source: rule}

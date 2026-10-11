@@ -155,8 +155,13 @@ def cancel(app: Application, now: datetime) -> None:
     app.updated_at = now
 
 
-def active_ids_of_subject(session: Session, realm_id: UUID, subject_key: str) -> list[UUID]:
-    return repository.active_ids_of_subject(session, realm_id, subject_key)
+def open_ids_of_subject(session: Session, realm_id: UUID, subject_key: str, now: datetime) -> list[UUID]:
+    """Кого из заявок человека касается новый факт: оценка с истёкшим сроком и так будет пересчитана."""
+    return repository.open_ids_of_subject(session, realm_id, subject_key, now)
+
+
+def open_ids(session: Session, realm_id: UUID, ids: set[UUID], now: datetime) -> set[UUID]:
+    return repository.open_ids(session, realm_id, ids, now)
 
 
 def get_visible(session: Session, realm_ids: tuple[UUID, ...], external_id: str) -> Application:

@@ -34,3 +34,31 @@ class Occurrence(Base):
         Index("ix_occurrences_application", "application_id"),
         Index("ix_occurrences_realm_received", "realm_id", "received_at"),
     )
+
+
+class ProgramContract(Base):
+    """Программная заявка одной строкой: роли (ключами индекса) и цена за единицу — база концентраций
+    и сравнимых покупок своего банка (Блок 3, зона 3)."""
+
+    __tablename__ = "program_contracts"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    realm_id: Mapped[UUID] = mapped_column(ForeignKey("realms.id", ondelete="CASCADE"))
+    application_id: Mapped[UUID] = mapped_column(ForeignKey("applications.id", ondelete="CASCADE"))
+    application_version: Mapped[int] = mapped_column(Integer)
+    branch_key: Mapped[str] = mapped_column(String(64))
+    employee_key: Mapped[str | None] = mapped_column(String(64))
+    helper_key: Mapped[str] = mapped_column(String(64))
+    supplier_key: Mapped[str] = mapped_column(String(64))
+    item_code: Mapped[str] = mapped_column(String(64))
+    unit: Mapped[str] = mapped_column(String(32))
+    district: Mapped[str] = mapped_column(String(128))
+    unit_price: Mapped[int] = mapped_column(BigInteger)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        Index("ix_program_contracts_item", "item_code", "unit", "received_at"),
+        Index("ix_program_contracts_branch", "branch_key", "received_at"),
+        Index("ix_program_contracts_helper", "helper_key", "received_at"),
+        Index("ix_program_contracts_received", "realm_id", "received_at"),
+    )

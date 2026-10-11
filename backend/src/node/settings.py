@@ -25,6 +25,7 @@ class NodeEnv(BaseSettings):
     config_path: Path = PACKAGE_DIR / "config" / "node.yaml"
     policy_dir: Path = PACKAGE_DIR / "modules" / "policy" / "rules"
     seeds_dir: Path = PACKAGE_DIR / "seeds"
+    scoring_config_path: Path = PACKAGE_DIR / "config" / "scoring.yaml"
 
 
 class _Frozen(BaseModel):
@@ -78,6 +79,10 @@ class DatabaseConfig(_Frozen):
     pool_size: int
 
 
+class HistoryConfig(_Frozen):
+    max_batch: int
+
+
 class NodeConfig(_Frozen):
     version: str
     policy: PolicyConfig
@@ -88,6 +93,7 @@ class NodeConfig(_Frozen):
     realms: RealmsConfig
     background: BackgroundConfig
     outbox: OutboxConfig
+    history: HistoryConfig
     http: HttpConfig
     database: DatabaseConfig
 

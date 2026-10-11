@@ -12,3 +12,6 @@ api_clients:
   - name: bank-sim-realms
     scopes: [realms]
     key_env: NODE_API_KEY_REALMS
+  - name: bank-sim-history
+    scopes: [history]           # прогон истории синтетического мира — только в общий мир
+    key_env: NODE_API_KEY_HISTORY

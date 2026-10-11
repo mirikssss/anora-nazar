@@ -2,7 +2,7 @@
 version: node-config-1
 
 policy:
-  active_version: policy-v1
+  active_version: policy-v2
 
 permits:
   reserve_ttl_seconds: 120          # резерв без итога → «неизвестно»
@@ -33,6 +33,9 @@ outbox:
         - hold.placed
         - permit.reserved
         - permit.finished
+
+history:
+  max_batch: 500                  # предложено: элементов истории в одном запросе прогона
 
 http:
   timeout_seconds: 5

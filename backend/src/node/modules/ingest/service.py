@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy.orm import Session
 
 from node.modules.applications import service as applications
@@ -26,6 +27,7 @@ from node.modules.ingest.domain import (
     lag_seconds,
 )
 from node.modules.ingest.schemas import WatermarkIn
+from node.modules.labels import service as labels
 from node.modules.outbox import service as outbox
 from node.modules.permits import service as permits
 from node.modules.policy.domain import Policy
@@ -33,6 +35,7 @@ from node.modules.realms.domain import RealmContext
 from node.settings import NodeConfig
 from shared.clock import Clock
 from shared.contracts.application import ApplicationSnapshot
+from shared.contracts.facts import FACTS
 from shared.errors import ConflictError, ValidationFailedError
 from shared.events import EventEnvelope
 
@@ -115,7 +118,8 @@ def accept_application_version(
     attrs = index.attributes(snapshot, ctx.index_key)
     app_id = applications.ensure(session, realm.id, external_id, snapshot.channel, subject, received_at)
     linked = index.linked_for_marking(session, realm, app_id, subject, attrs, received_at, ctx.policy)
-    locked = applications.lock(session, {app_id} | {link.application_id for link in linked})
+    open_linked = applications.open_ids(session, realm.id, {link.application_id for link in linked}, received_at)
+    locked = applications.lock(session, {app_id} | open_linked)
     app = locked[app_id]
     if app.status != "active":
         raise ConflictError("application_cancelled", "Заявка отменена")
@@ -127,7 +131,7 @@ def accept_application_version(
     )
     if result.outcome is not VersionOutcome.APPLIED:
         return AcceptedVersion(app, result.outcome, [])
-    index.record_version(session, realm.id, app.id, version, subject, attrs, occurred_at, received_at)
+    index.record_version(session, realm.id, app.id, version, subject, attrs, snapshot, occurred_at, received_at)
     repository.drop_parked_up_to(session, realm.id, APPLICATION_ENTITY, external_id, version)
     targets = {link.application_id: link.kinds for link in linked if link.application_id in locked}
     cause = {"trigger_application": external_id, "trigger_version": version, "received_at": received_at.isoformat()}
@@ -270,8 +274,21 @@ def _source_fact(
         repository.save_entity_version(
             session, realm.id, envelope.source, envelope.entity_type, envelope.entity_id, envelope.entity_version
         )
+    known = FACTS.get(envelope.type)
+    if known is not None:
+        try:
+            known.model_validate(envelope.payload)
+        except PydanticValidationError as exc:
+            raise ValidationFailedError(
+                "invalid_fact",
+                f"Факт {envelope.type} не соответствует контракту",
+                {"errors": exc.errors(include_url=False, include_context=False)},
+            ) from exc
     pinfl = envelope.payload.get("subject_pinfl")
     subject = subject_key(ctx.index_key, str(pinfl)) if pinfl else None
+    labels.record_from_fact(
+        session, realm.id, envelope.type, envelope.payload, envelope.event_id, envelope.occurred_at, received_at
+    )
     repository.add_fact(
         session,
         {
@@ -288,7 +305,7 @@ def _source_fact(
         },
     )
     if subject is not None:
-        ids = applications.active_ids_of_subject(session, realm.id, subject)
+        ids = applications.open_ids_of_subject(session, realm.id, subject, received_at)
         locked = applications.lock(session, set(ids))
         cause = {
             "source": envelope.source,
@@ -368,3 +385,23 @@ def resolve_gap(
 
 def metrics(session: Session, realm_id: UUID) -> dict[str, Any]:
     return repository.metric_summary(session, realm_id)
+
+
+def latest_fact(
+    session: Session,
+    realm: RealmContext,
+    type_: str,
+    as_of: datetime,
+    *,
+    subject_key: str | None = None,
+    entity_id: str | None = None,
+) -> dict[str, Any] | None:
+    return repository.latest_payload(
+        session, realm.visible_ids, type_, as_of, subject_key=subject_key, entity_id=entity_id
+    )
+
+
+def latest_facts_by_subject(
+    session: Session, realm: RealmContext, type_: str, subjects: list[str], as_of: datetime
+) -> dict[str, dict[str, Any]]:
+    return repository.latest_payloads_by_subject(session, realm.visible_ids, type_, subjects, as_of)

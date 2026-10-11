@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -69,6 +69,11 @@ class SourceFact(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        Index("ix_source_facts_type_subject", "type", "subject_key", "received_at"),
+        Index("ix_source_facts_type_entity", "type", "entity_id", "received_at"),
+    )
 
 
 class Watermark(Base):

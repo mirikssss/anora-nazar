@@ -4,11 +4,15 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from bank_sim.database import Base
+
+# Контракт единственной проводки с узлом (ревью B): по бизнес-операции «заявка + тип + транш» не больше одной
+# незавершённой или исполненной попытки; повтор после сбоя идёт с тем же ключом операции.
+LIVE_STATUSES = "status in ('in_progress', 'waiting_node', 'executed')"
 
 
 class Operation(Base):
@@ -31,3 +35,15 @@ class Operation(Base):
     outcome_reported: Mapped[bool] = mapped_column(Boolean)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        Index(
+            "uq_operations_business_operation",
+            "realm_id",
+            "application_id",
+            "operation_type",
+            "tranche",
+            unique=True,
+            postgresql_where=text(LIVE_STATUSES),
+        ),
+    )

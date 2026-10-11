@@ -16,6 +16,7 @@ secret() { openssl rand -hex 32; }
   echo "NODE_API_KEY_CORE_BANKING=$(secret)"
   echo "NODE_API_KEY_EVENTS=$(secret)"
   echo "NODE_API_KEY_REALMS=$(secret)"
+  echo "NODE_API_KEY_HISTORY=$(secret)"
   echo "BANK_SIM_API_KEY_NODE=$(secret)"
   echo "ANCHOR_API_KEY_NODE=$(secret)"
 } > .env

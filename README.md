@@ -33,8 +33,18 @@ docker compose up --build -d
 | имитатор банка | http://localhost:8001 | http://localhost:8001/docs |
 | якорь журнала | http://localhost:8002 | http://localhost:8002/docs |
 
-Все тесты — юнит, интеграционные на PostgreSQL и сквозные против поднятого стенда:
+Общий синтетический мир строится один раз на чистом стенде. Генератор создаёт 11 месяцев истории банка, она прогоняется через узел — около 15–20 минут. Затем обучаются модели, и два риск-менеджера выпускают их в общий мир:
 
 ```bash
-docker compose --profile test run --build --rm tests
+docker compose --profile setup run --build --rm world
+```
+
+```bash
+docker compose --profile setup run --rm train
+```
+
+Все тесты — юнит, интеграционные на PostgreSQL и сквозные против поднятого стенда. Код монтируется томом, пересборка нужна только после смены зависимостей:
+
+```bash
+docker compose --profile test run --rm tests
 ```

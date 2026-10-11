@@ -1,0 +1,171 @@
+# Параметры генератора синтетического мира.
+# СТАТУС: предложено, ждёт согласования владельцем (CLAUDE.md, правило 2). Правка значения — перегенерация мира.
+# Значения условные и опираются только на публичные агрегаты (Блок 3, «Синтетические данные»):
+# доля фрода около 1 %, как в BAF; NPL программ (16 %) как долю фрода не используем.
+version: world-v1
+seed: 20261011
+scale: 1.0                      # множитель числа людей и заявок; тесты берут малый
+
+period:
+  start: 2025-11-01             # 11 месяцев истории до демо (Блок 3: 8–12 месяцев)
+  months: 11
+timezone: Asia/Tashkent         # «ночная заявка» считается по местному времени
+
+population:
+  people: 50000
+  birth_years: [1962, 2005]
+  household_sizes: {1: 0.15, 2: 0.20, 3: 0.25, 4: 0.20, 5: 0.12, 6: 0.08}
+  shared_phone_household_share: 0.06   # ловушка: семья с одним телефоном
+  shared_device_household_share: 0.10  # ловушка: общий планшет семьи
+  dormitories: {count: 15, residents: [40, 120]}   # шумный хаб по адресу
+  card_in_bank_share: 0.55
+  inps_available_share: 0.75
+  inps_voluntary_distinguishable: true   # Блок 3, открытый вопрос 4: можно ли отличить — пока да
+  monthly_income: {median: 4500000, sigma: 0.5}   # сум; ориентир — средняя начисленная зарплата stat.uz
+  spending_to_income: {median: 0.6, sigma: 0.25}
+  male_share: 0.5               # добавлено генератором, ждёт согласования: первая цифра ПИНФЛ — век и пол
+  phone_operator_codes: ["90", "91", "93", "94", "95", "97", "98", "99", "33", "88"]   # добавлено генератором, ждёт согласования
+  device_age_days: [60, 1500]   # добавлено генератором, ждёт согласования: возраст обычного устройства к началу периода
+
+organizations:
+  employers: {count: 2500, size_zipf: 1.3, new_share: 0.10,   # крупные работодатели — хабы
+              max_headcount: 5000,                            # добавлено генератором, ждёт согласования: численность первого по Ципфу
+              headcount_growth: {median: 1.05, sigma: 0.15}}  # добавлено генератором, ждёт согласования: численность / год назад
+  payroll_projects: {count: 30, wave_size: [15, 60], wave_days: 7}   # ловушка: волна заявок одного работодателя
+  regions:
+    - {code: "01", name: Ташкент, districts: 4}
+    - {code: "02", name: Самарканд, districts: 3}
+    - {code: "03", name: Фергана, districts: 3}
+    - {code: "04", name: Кашкадарья, districts: 2}
+  branches_per_region: 3
+  employees_per_branch: 5
+  helpers_per_district: 10
+  suppliers: {count: 300, new_share: 0.10,
+              headcount: [2, 80]}   # добавлено генератором, ждёт согласования
+  registration_age_days:            # добавлено генератором, ждёт согласования: возраст юрлица к первому появлению
+    established: [730, 9000]
+    new: [30, 365]                  # новичок; для схемы F3 — до её начала
+  items:                                    # медиана рыночной цены за единицу, сум; разброс — сигма логарифма
+    - {code: cow, category: livestock, unit: head, median: 12000000, sigma: 0.12, quantity: [1, 3]}
+    - {code: sheep, category: livestock, unit: head, median: 2200000, sigma: 0.12, quantity: [3, 15]}
+    - {code: greenhouse, category: greenhouse, unit: m2, median: 160000, sigma: 0.15, quantity: [100, 600]}
+    - {code: sewing_machine, category: equipment, unit: piece, median: 3500000, sigma: 0.10, quantity: [1, 6]}
+    - {code: mini_tractor, category: equipment, unit: piece, median: 65000000, sigma: 0.10, quantity: [1, 1]}
+    - {code: drip_irrigation, category: greenhouse, unit: ha, median: 18000000, sigma: 0.15, quantity: [1, 4]}
+  normal_program_batches: {share: 0.25, size: [8, 25], days: 7}   # ловушка: обычная программная партия
+
+lenders:                        # банк A — полный узел; Б и В — генераторы событий в сеть (И4)
+  - {code: A, share: 0.60}
+  - {code: B, share: 0.25}
+  - {code: C, share: 0.15}
+
+applications:                   # объём банка A
+  lender: A                     # добавлено генератором, ждёт согласования: чью историю получает узел
+  online_per_month: 2500
+  program_per_month: 500
+  online_branch_id: ONLINE      # онлайн-канал без филиала и сотрудника
+  online_amount: {median: 6000000, sigma: 0.6, min: 500000, max: 50000000}
+  amount_step: 100000           # добавлено генератором, ждёт согласования: онлайн-сумма кратна шагу
+  online_terms: [6, 12, 18, 24]
+  program_terms: [24, 36]
+  hour_weights: [1, 1, 1, 1, 1, 2, 4, 6, 8, 9, 9, 9, 9, 9, 9, 9, 8, 8, 7, 6, 5, 4, 3, 2]
+  night_hours: [0, 1, 2, 3, 4, 5]   # добавлено генератором, ждёт согласования: «ночь» по местному времени
+  second_version_share: 0.05    # заявитель меняет сумму — новая версия заявки
+  second_version_delay_minutes: [5, 180]     # добавлено генератором, ждёт согласования
+  second_version_amount_factor: [0.5, 1.5]   # добавлено генератором, ждёт согласования
+  mandatory_failures:           # обязательные шаги № 3759 останавливают процесс
+    self_ban_active: 0.003
+    bureau_busy: 0.002
+    biometry_failed: 0.002
+    phone_not_owned: 0.002
+  source_lead_minutes: [1, 20]  # банк спрашивает источники перед вызовом узла
+
+session:                        # добавлено генератором, ждёт согласования: значения сессии при сработавшем признаке
+  access_recovery_hours: [0.2, 24]   # восстановление доступа за столько часов до заявки
+  new_device_age_days: [0, 3]        # «новое устройство» — первый раз видно столько дней назад
+  remote_control_share: 0.5          # доля удалённого управления среди «удалённое управление или звонок»
+  form_seconds: [90, 900]            # обычное заполнение формы
+  fast_form_seconds: [15, 60]        # быстрое заполнение со вставкой текста
+
+bureau:                         # добавлено генератором, ждёт согласования
+  active_loans: [0, 3]
+  closed_loans: [1, 8]
+  self_ban_lifted_days: [1, 30]      # «самозапрет снят недавно»
+
+sources:                        # добавлено генератором, ждёт согласования
+  card_months: 6                     # траты по картам за 6 месяцев (Блок 3, зона 1)
+  spending_monthly_sigma: 0.2
+  inps_months: 15                    # 12 месяцев фона + 3 месяца скачка (Блок 3, зона 3)
+  inps_contribution_rate: 0.001      # ориентир: обязательный взнос в ИНПС — 0,1 % начисленной зарплаты
+  inps_monthly_sigma: 0.1
+  income_jump_months: 3
+  income_jump_factor: [2.0, 4.0]     # во сколько раз растут взносы при скачке
+
+honest:                         # вероятности признаков у честных — шум и ловушки
+  access_recovery_hours_before: 0.03
+  new_device_days: 0.08
+  remote_control_or_call: 0.02
+  night: 0.08
+  first_credit: 0.25
+  self_ban_lifted_30d: 0.005
+  pasted_fast_form: 0.10
+  amount_to_spending: {median: 1.0, sigma: 0.5}
+  income_jump: 0.03
+  first_payment_missed: 0.02    # добавлено генератором, ждёт согласования: ловушка — честный пропуск первого платежа
+
+fraud:
+  f1:                           # воздействие на заёмщика, только онлайн
+    share_of_online: 0.0035
+    victims_without_anomalies: 0.20   # ловушка: жертва без аномалий
+    access_recovery_hours_before: 0.55
+    new_device_days: 0.50
+    remote_control_or_call: 0.35
+    night: 0.30
+    first_credit: 0.50
+    self_ban_lifted_30d: 0.20
+    pasted_fast_form: 0.30
+    amount_to_spending: {median: 4.0, sigma: 0.5}
+    clean_history_share: 0.70  # «чистый клиент с долгой историей» (Блок 3, зона 1)
+  f2:                           # подставные заёмщики и группы, оба канала
+    share_of_applications: 0.005
+    ring_size: [4, 12]
+    ring_days: 10
+    identity_kinds: [phone, device, address]
+    single_kind_rings: 0.25    # маскировка: только один вид общей связи
+    coordination_rings: 0.30   # без общих идентификаторов, только общие роли (сотрудник, помощник, поставщик)
+    coordination_shared_roles: [1, 3]   # добавлено генератором, ждёт согласования: сколько ролей общие у такого кольца
+    shared_employee_share: 0.40
+    first_credit: 0.70
+  f3:                           # схема в программном займе
+    share_of_program: 0.015
+    overprice: {median: 1.6, sigma: 0.15}
+    new_supplier: 0.60
+    helper_burst: 0.60
+    burst_days: 10             # добавлено генератором, ждёт согласования: окно всплеска рекомендаций
+    spread_days: 90            # добавлено генератором, ждёт согласования: окно схемы без всплеска
+    outside_helper_mahalla: 0.50
+    income_jump: 0.50          # взносы ИНПС за 3 месяца до заявки, добровольные
+    scheme_size: [3, 10]
+
+outcomes:
+  observation_days: {online: 90, program: 180}   # окно «созрел без проблем» — слабый негатив
+  payment_interval_days: 30     # добавлено генератором, ждёт согласования: платёж раз в столько дней
+  f1: {detected: 0.70, delay_days: [7, 90], kinds: {client_report: 0.6, internal_control: 0.4}}
+  f2: {detected: 0.60, first_payment_missed_days: [30, 45], delay_days: [30, 120],
+       kinds: {internal_control: 0.7, law_enforcement: 0.3}}
+  f3: {detected: 0.50, delay_days: [60, 240], kinds: {internal_control: 0.8, law_enforcement: 0.2}}
+  false_alarm_share: 0.002      # проверка честной заявки → «ложное срабатывание», сильный негатив
+  unconfirmed_complaint_share: 0.001   # жалоба не подтвердилась — не метка
+  inps_correction_share: 0.02   # поздняя правка взносов — следующая версия факта
+  inps_correction_delay_days: [5, 60]
+  inps_correction_factor: [0.5, 1.5]   # добавлено генератором, ждёт согласования: правка взноса за один месяц
+
+naming:                         # добавлено генератором, ждёт согласования: тексты данных мира
+  district: "{region}, район {number}"
+  mahalla: "махалля {number}"
+  address: "{district}, {mahalla}, дом {house}"
+  dormitory: "{district}, общежитие {number}"
+  branch: "Филиал {region} {number}"
+  employee: "Кредитный специалист {number}, {branch}"
+  employee_role: credit_officer
+  supplier: "Поставщик {number}"

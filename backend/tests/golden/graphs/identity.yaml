@@ -1,0 +1,60 @@
+# Эталонные графы группы идентичности. Шаг — новая заявка (id) или переоценка (reassess); день — от начала теста.
+# Сокращения: телефоны P*, устройства D*, адреса A*, работодатели E*, сотрудники S*. Ожидание — на оценке шага.
+cases:
+  - name: hub_does_not_link
+    note: устройство у 12 человек — шумный хаб (порог 10)
+    steps:
+      - {repeat: 11, id: H, day: 0, device: D1}
+      - {id: X, day: 0, device: D1, expect: {independent_rare_links: 0, group_applications: 1, burst: false}}
+
+  - name: two_kinds_are_two_independent_links
+    steps:
+      - {id: A, day: 0, phone: P1, device: D1}
+      - {id: B, day: 1, phone: P1, device: D1, expect: {independent_rare_links: 2, group_applications: 2}}
+
+  - name: same_kind_with_two_people_is_one_link
+    note: общий адрес с двумя разными заявками — один вид связи
+    steps:
+      - {id: A, day: 0, address: A1}
+      - {id: C, day: 0, address: A1}
+      - {id: B, day: 1, address: A1, expect: {independent_rare_links: 1, group_applications: 3}}
+
+  - name: own_applications_do_not_link
+    steps:
+      - {id: A, day: 0, person: 1, phone: P1}
+      - {id: A2, day: 1, person: 1, phone: P1, expect: {independent_rare_links: 0, group_applications: 1}}
+
+  - name: traversal_stops_at_max_hops
+    note: цепочка F–E–D–C–B–A по разным телефонам; от F видно не дальше трёх шагов
+    steps:
+      - {id: A, day: 0, phone: P1}
+      - {id: B, day: 0, phone: P1, device: D2}
+      - {id: C, day: 0, device: D2, address: A3}
+      - {id: D, day: 0, address: A3, employer: E4}
+      - {id: E, day: 0, employer: E4, phone: P5}
+      - {id: F, day: 0, phone: P5, expect: {group_applications: 4}}
+
+  - name: late_fact_is_invisible_until_received
+    note: заявка A получена позже оценки B; переоценка B после получения A видит связь
+    steps:
+      - {id: B, day: 0, phone: P1, device: D1, expect: {independent_rare_links: 0}}
+      - {id: A, day: 2, phone: P1, device: D1}
+      - {reassess: B, day: 3, expect: {independent_rare_links: 2, group_applications: 2}}
+
+  - name: edit_does_not_erase_link
+    note: A меняет телефон во второй версии; старый телефон остаётся фактом
+    steps:
+      - {id: A, day: 0, phone: P1}
+      - {reassess: A, day: 1, phone: P9}
+      - {id: B, day: 2, phone: P1, expect: {independent_rare_links: 1, group_applications: 2}}
+
+  - name: link_leaves_window
+    note: окно индекса 90 дней
+    steps:
+      - {id: A, day: 0, phone: P1}
+      - {id: B, day: 91, phone: P1, expect: {independent_rare_links: 0, group_applications: 1}}
+
+  - name: burst_flags_group
+    steps:
+      - {repeat: 5, id: R, day: 0, address: A7}
+      - {id: X, day: 1, address: A7, expect: {burst: true, group_applications: 6}}

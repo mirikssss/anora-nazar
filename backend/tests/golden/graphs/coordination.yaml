@@ -1,0 +1,15 @@
+# Эталонные графы группы координации (ревью E): общие роли без общих идентификаторов.
+cases:
+  - name: employee_burst_without_shared_identifiers
+    note: обычный темп S1 — 2 заявки за 80 дней; затем 10 заявок за 3 дня с разными телефонами
+    steps:
+      - {id: O1, day: 0, employee: S1}
+      - {id: O2, day: 40, employee: S1}
+      - {repeat: 9, id: R, day: 85, employee: S1}
+      - {id: X, day: 87, employee: S1, expect: {independent_rare_links: 0, coordination_flagged: [employee]}}
+
+  - name: steady_employee_is_not_flagged
+    note: S2 оформляет по заявке каждые два дня — это его обычная нагрузка
+    steps:
+      - {repeat: 44, id: N, day: 0, every_days: 2, employee: S2}
+      - {id: X, day: 89, employee: S2, expect: {coordination_flagged: []}}

@@ -32,6 +32,7 @@ KEYS = {
     "core_banking": "test-core-banking",
     "events": "test-events",
     "realms": "test-realms",
+    "history": "test-history",
 }
 START = datetime(2026, 10, 11, 9, 0, tzinfo=UTC)
 
@@ -252,6 +253,7 @@ def online(
     device: str | None = None,
     address: str | None = None,
     employer: str | None = None,
+    employee: str | None = "EMP-01-1",
     amount: int = 30_000_000,
     self_ban: str = "none",
 ) -> dict[str, Any]:
@@ -262,7 +264,7 @@ def online(
     return {
         "channel": "online",
         "branch_id": "BR-01",
-        "employee_id": "EMP-01-1",
+        "employee_id": employee,
         "applicant": applicant,
         "loan": {"amount": amount, "term_months": 12},
         "disbursement_account": f"ACC-{pinfl[-6:]}",
