@@ -11,6 +11,7 @@
           "Система"
         ],
         "summary": "Health",
+        "description": "version — коммит сборки образа; null — сборка без версии (стенд разработки).",
         "operationId": "health_v1_system_health_get",
         "responses": {
           "200": {
@@ -19,7 +20,14 @@
               "application/json": {
                 "schema": {
                   "additionalProperties": {
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "type": "object",
                   "title": "Response Health V1 System Health Get"
@@ -1726,7 +1734,7 @@
           },
           "invoice_amount": {
             "type": "integer",
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Invoice Amount"
           }
         },
@@ -1874,7 +1882,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "exclusiveMinimum": 0.0
+                "exclusiveMinimum": 0
               },
               {
                 "type": "null"
@@ -1886,8 +1894,8 @@
             "anyOf": [
               {
                 "type": "integer",
-                "maximum": 600.0,
-                "exclusiveMinimum": 0.0
+                "maximum": 600,
+                "exclusiveMinimum": 0
               },
               {
                 "type": "null"
@@ -1925,7 +1933,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "exclusiveMinimum": 0.0
+                "exclusiveMinimum": 0
               },
               {
                 "type": "null"
@@ -1937,7 +1945,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "exclusiveMinimum": 0.0
+                "exclusiveMinimum": 0
               },
               {
                 "type": "null"
@@ -2157,14 +2165,14 @@
           },
           "amount": {
             "type": "integer",
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Amount",
             "description": "Сумма займа, сум"
           },
           "term_months": {
             "type": "integer",
-            "maximum": 600.0,
-            "exclusiveMinimum": 0.0,
+            "maximum": 600,
+            "exclusiveMinimum": 0,
             "title": "Term Months"
           }
         },
@@ -2366,6 +2374,12 @@
             "type": "boolean",
             "title": "Queue Lag",
             "description": "Очередь событий в узел стоит"
+          },
+          "network_unavailable": {
+            "type": "boolean",
+            "title": "Network Unavailable",
+            "description": "Сеть кредиторов недоступна: оператор отвечает отказом на запросы этой песочницы",
+            "default": false
           }
         },
         "type": "object",
@@ -2410,6 +2424,17 @@
               }
             ],
             "title": "Queue Lag"
+          },
+          "network_unavailable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Network Unavailable"
           }
         },
         "type": "object",
@@ -2601,13 +2626,13 @@
         "properties": {
           "amount": {
             "type": "integer",
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Amount"
           },
           "term_months": {
             "type": "integer",
-            "maximum": 600.0,
-            "exclusiveMinimum": 0.0,
+            "maximum": 600,
+            "exclusiveMinimum": 0,
             "title": "Term Months"
           },
           "purpose": {
@@ -2750,7 +2775,7 @@
           },
           "tranche": {
             "type": "integer",
-            "minimum": 1.0,
+            "minimum": 1,
             "title": "Tranche",
             "default": 1
           },
@@ -2996,12 +3021,12 @@
           },
           "unit_price": {
             "type": "integer",
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Unit Price"
           },
           "quantity": {
             "type": "integer",
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Quantity"
           },
           "district": {
@@ -3122,7 +3147,7 @@
           },
           "amount": {
             "type": "integer",
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Amount",
             "description": "Другая сумма для того же ключа операции"
           }
@@ -3571,7 +3596,7 @@
           },
           "amount": {
             "type": "integer",
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Amount",
             "description": "Сумма перевода, сум"
           }

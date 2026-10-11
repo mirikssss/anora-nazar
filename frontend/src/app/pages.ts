@@ -34,4 +34,7 @@ export const PolicyPage = lazy(() =>
 export const ModelQualityPage = lazy(() =>
   import("@/pages/risk/ModelQualityPage").then((m) => ({ default: m.ModelQualityPage })),
 );
+export const NetworkPage = lazy(() =>
+  import("@/pages/risk/NetworkPage").then((m) => ({ default: m.NetworkPage })),
+);
 export const AuditPage = lazy(() => import("@/pages/risk/AuditPage").then((m) => ({ default: m.AuditPage })));

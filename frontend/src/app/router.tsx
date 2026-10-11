@@ -18,6 +18,7 @@ import {
   CoreBankingPage,
   DecisionPage,
   ModelQualityPage,
+  NetworkPage,
   PolicyPage,
   RiskOverviewPage,
 } from "./pages";
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
       { path: "/bank/core-banking", element: guarded(PERMISSIONS.executeCoreBanking, <CoreBankingPage />) },
       { path: "/decisions/:decisionId", element: guarded(PERMISSIONS.viewDecisions, <DecisionPage />) },
       { path: "/risk/models", element: guarded(PERMISSIONS.viewQuality, <ModelQualityPage />) },
+      { path: "/risk/network", element: guarded(PERMISSIONS.viewQuality, <NetworkPage />) },
       { path: "/risk/audit", element: guarded(PERMISSIONS.viewAudit, <AuditPage />) },
       { path: "/borrower", element: guarded(PERMISSIONS.submitOnline, <BorrowerAppPage />) },
       { path: "/analyst", element: guarded(PERMISSIONS.viewOnlineCases, <AnalystQueuePage />) },

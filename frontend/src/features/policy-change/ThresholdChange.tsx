@@ -34,11 +34,25 @@ type FormErrors = Partial<Record<keyof FormState, string>>;
 
 const EMPTY: FormState = { path: "", value: "", reason: "" };
 
+const TOGGLE = { on: "true", off: "false" } as const;
+
+function isToggle(threshold: Threshold | undefined): boolean {
+  return typeof threshold?.value === "boolean";
+}
+
+/** Новое значение из формы: у переключателя — выбор «включить/выключить», у порога — число. */
+function parseValue(input: string, current: Threshold | undefined): Threshold["value"] | null {
+  if (!isToggle(current)) return parseThreshold(input);
+  if (input === TOGGLE.on) return true;
+  if (input === TOGGLE.off) return false;
+  return null;
+}
+
 function validate(state: FormState, current: Threshold | undefined): FormErrors {
   const errors: FormErrors = {};
-  const value = parseThreshold(state.value);
+  const value = parseValue(state.value, current);
   if (current === undefined) errors.path = t.errors.threshold;
-  if (value === null) errors.value = t.errors.value;
+  if (value === null) errors.value = isToggle(current) ? t.errors.toggle : t.errors.value;
   else if (current !== undefined && value === current.value) errors.value = t.errors.same;
   if (state.reason.trim() === "") errors.reason = t.errors.reason;
   return errors;
@@ -90,7 +104,7 @@ export function ThresholdChange({ thresholds }: { thresholds: readonly Threshold
     event.preventDefault();
     const found = validate(state, current);
     setErrors(found);
-    const value = parseThreshold(state.value);
+    const value = parseValue(state.value, current);
     if (Object.keys(found).length > 0 || current === undefined || value === null) return;
     propose.mutate({ changes: { [current.path]: value }, reason: state.reason.trim() });
   };
@@ -120,27 +134,43 @@ export function ThresholdChange({ thresholds }: { thresholds: readonly Threshold
             choose(event.target.value);
           }}
         />
-        <TextField
-          label={t.newValue}
-          value={state.value}
-          inputMode="decimal"
-          autoComplete="off"
-          disabled={current === undefined}
-          error={errors.value ?? fieldErrors[`changes.${state.path}`]}
-          suggestion={
-            valueExample === null
-              ? undefined
-              : {
-                  value: valueExample,
-                  onAccept: () => {
-                    update({ value: valueExample });
-                  },
-                }
-          }
-          onChange={(event) => {
-            update({ value: event.target.value });
-          }}
-        />
+        {isToggle(current) ? (
+          <SelectField
+            label={t.newValue}
+            value={state.value}
+            placeholder={t.chooseState}
+            options={[
+              { value: TOGGLE.on, label: t.turnOn },
+              { value: TOGGLE.off, label: t.turnOff },
+            ]}
+            error={errors.value ?? fieldErrors[`changes.${state.path}`]}
+            onChange={(event) => {
+              update({ value: event.target.value });
+            }}
+          />
+        ) : (
+          <TextField
+            label={t.newValue}
+            value={state.value}
+            inputMode="decimal"
+            autoComplete="off"
+            disabled={current === undefined}
+            error={errors.value ?? fieldErrors[`changes.${state.path}`]}
+            suggestion={
+              valueExample === null
+                ? undefined
+                : {
+                    value: valueExample,
+                    onAccept: () => {
+                      update({ value: valueExample });
+                    },
+                  }
+            }
+            onChange={(event) => {
+              update({ value: event.target.value });
+            }}
+          />
+        )}
         <TextField
           label={t.reason}
           value={state.reason}

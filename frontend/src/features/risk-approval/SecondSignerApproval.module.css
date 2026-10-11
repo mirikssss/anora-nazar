@@ -12,6 +12,14 @@
   text-align: right;
 }
 
+.start {
+  align-items: flex-start;
+}
+
+.start .note {
+  text-align: left;
+}
+
 @media (--phone-only) {
   .wrap {
     align-items: flex-start;

@@ -16,9 +16,16 @@ interface SecondSignerApprovalProps {
   approve: () => Promise<unknown>;
   /** Что перечитать после подтверждения: список ожидающих и то, что изменилось. */
   invalidate: readonly QueryKey[];
+  /** В конце строки таблицы — по правому краю; в блоке текста — по левому. */
+  align?: "start" | "end";
 }
 
-export function SecondSignerApproval({ requestedBy, approve, invalidate }: SecondSignerApprovalProps) {
+export function SecondSignerApproval({
+  requestedBy,
+  approve,
+  invalidate,
+  align = "end",
+}: SecondSignerApprovalProps) {
   const session = useSession();
   const queryClient = useQueryClient();
   const approval = useMutation({
@@ -27,7 +34,7 @@ export function SecondSignerApproval({ requestedBy, approve, invalidate }: Secon
   });
   const own = isOwnRequest(session, requestedBy);
   return (
-    <span className={styles.wrap}>
+    <span className={[styles.wrap, align === "start" ? styles.start : ""].join(" ")}>
       <Button
         size="sm"
         variant="primary"

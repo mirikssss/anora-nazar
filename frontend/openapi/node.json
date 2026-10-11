@@ -11,6 +11,7 @@
           "Система"
         ],
         "summary": "Health",
+        "description": "version — коммит сборки образа; null — сборка без версии (стенд разработки).",
         "operationId": "health_v1_system_health_get",
         "responses": {
           "200": {
@@ -19,7 +20,14 @@
               "application/json": {
                 "schema": {
                   "additionalProperties": {
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "type": "object",
                   "title": "Response Health V1 System Health Get"
@@ -1564,6 +1572,69 @@
           }
         }
       }
+    },
+    "/v1/network/notifications": {
+      "post": {
+        "tags": [
+          "Сеть кредиторов"
+        ],
+        "summary": "Receive Notification",
+        "description": "Оператор шлёт уведомление в контур песочницы с заголовком, в общий мир — без него.",
+        "operationId": "receive_notification_v1_network_notifications_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchNotification"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/network/overview": {
+      "get": {
+        "tags": [
+          "Сеть кредиторов"
+        ],
+        "summary": "Overview",
+        "operationId": "overview_v1_network_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkOverviewOut"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1925,7 +1996,7 @@
           },
           "application_version": {
             "type": "integer",
-            "minimum": 1.0,
+            "minimum": 1,
             "title": "Application Version"
           },
           "occurred_at": {
@@ -2963,7 +3034,14 @@
             "title": "Path"
           },
           "value": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              }
+            ],
             "title": "Value"
           }
         },
@@ -2972,7 +3050,8 @@
           "path",
           "value"
         ],
-        "title": "EditableThreshold"
+        "title": "EditableThreshold",
+        "description": "Порог (число) или переключатель (true/false, например сеть кредиторов)."
       },
       "EventEnvelope": {
         "properties": {
@@ -3009,7 +3088,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "minimum": 1.0
+                "minimum": 1
               },
               {
                 "type": "null"
@@ -3036,7 +3115,7 @@
           },
           "schema_version": {
             "type": "integer",
-            "minimum": 1.0,
+            "minimum": 1,
             "title": "Schema Version"
           },
           "payload": {
@@ -3094,7 +3173,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "minimum": 1.0
+                "minimum": 1
               },
               {
                 "type": "null"
@@ -3121,7 +3200,7 @@
           },
           "schema_version": {
             "type": "integer",
-            "minimum": 1.0,
+            "minimum": 1,
             "title": "Schema Version"
           },
           "payload": {
@@ -3282,7 +3361,7 @@
           },
           "application_version": {
             "type": "integer",
-            "minimum": 1.0,
+            "minimum": 1,
             "title": "Application Version"
           },
           "snapshot": {
@@ -3451,13 +3530,13 @@
         "properties": {
           "amount": {
             "type": "integer",
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Amount"
           },
           "term_months": {
             "type": "integer",
-            "maximum": 600.0,
-            "exclusiveMinimum": 0.0,
+            "maximum": 600,
+            "exclusiveMinimum": 0,
             "title": "Term Months"
           },
           "purpose": {
@@ -3523,6 +3602,47 @@
         ],
         "title": "MandatoryChecks",
         "description": "Итоги обязательных шагов № 3759, которые конвейер выполнил до вызова узла."
+      },
+      "MatchNotification": {
+        "properties": {
+          "notification_id": {
+            "type": "string",
+            "title": "Notification Id"
+          },
+          "ref": {
+            "type": "string",
+            "title": "Ref"
+          },
+          "kinds": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "pinfl",
+                "phone",
+                "device",
+                "card",
+                "supplier_inn"
+              ]
+            },
+            "type": "array",
+            "title": "Kinds"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "notification_id",
+          "ref",
+          "kinds",
+          "occurred_at"
+        ],
+        "title": "MatchNotification",
+        "description": "Оператор → кредитор: у заявки ref появилось новое совпадение у другого кредитора."
       },
       "MeOut": {
         "properties": {
@@ -3619,6 +3739,104 @@
         ],
         "title": "ModelVersionOut"
       },
+      "NetworkOverviewOut": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "description": "Сеть включена действующей политикой контура"
+          },
+          "policy_version": {
+            "type": "string",
+            "title": "Policy Version"
+          },
+          "contract": {
+            "type": "string",
+            "title": "Contract"
+          },
+          "configured": {
+            "type": "boolean",
+            "title": "Configured",
+            "description": "Адрес оператора задан в окружении узла"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available",
+            "description": "Оператор ответил сейчас"
+          },
+          "toggle_path": {
+            "type": "string",
+            "title": "Toggle Path",
+            "description": "Путь переключателя в предложении порогов со вторым подписантом"
+          },
+          "rules": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Rules"
+          },
+          "operator": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator",
+            "description": "Счётчики оператора по кредитору и контуру; null — не ответил"
+          },
+          "decisions": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Decisions",
+            "description": "Решения контура по статусу ответа сети"
+          },
+          "notifications": {
+            "type": "integer",
+            "title": "Notifications"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "policy_version",
+          "contract",
+          "configured",
+          "available",
+          "toggle_path",
+          "rules",
+          "operator",
+          "decisions",
+          "notifications"
+        ],
+        "title": "NetworkOverviewOut",
+        "description": "Страница «Сеть кредиторов»: переключатель из политики и счётчики оператора по своему контуру."
+      },
+      "NotificationOut": {
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "marked",
+              "ignored",
+              "duplicate"
+            ],
+            "title": "Outcome"
+          }
+        },
+        "type": "object",
+        "required": [
+          "outcome"
+        ],
+        "title": "NotificationOut"
+      },
       "ParticipantDecisionIn": {
         "properties": {
           "action": {
@@ -3667,7 +3885,7 @@
           },
           "application_version": {
             "type": "integer",
-            "minimum": 1.0,
+            "minimum": 1,
             "title": "Application Version"
           },
           "operation_type": {
@@ -3680,13 +3898,13 @@
           },
           "tranche": {
             "type": "integer",
-            "minimum": 1.0,
+            "minimum": 1,
             "title": "Tranche",
             "default": 1
           },
           "amount": {
             "type": "integer",
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Amount"
           },
           "account": {
@@ -3854,12 +4072,12 @@
           },
           "unit_price": {
             "type": "integer",
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Unit Price"
           },
           "quantity": {
             "type": "integer",
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Quantity"
           },
           "district": {
@@ -3900,7 +4118,14 @@
         "properties": {
           "changes": {
             "additionalProperties": {
-              "type": "number"
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                }
+              ]
             },
             "type": "object",
             "maxProperties": 20,
@@ -3934,7 +4159,14 @@
           },
           "changes": {
             "additionalProperties": {
-              "type": "number"
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                }
+              ]
             },
             "type": "object",
             "title": "Changes"
@@ -4972,7 +5204,7 @@
           },
           "amount": {
             "type": "integer",
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Amount"
           },
           "recipient_card": {
@@ -4986,7 +5218,7 @@
           },
           "balance_before_credit": {
             "type": "integer",
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Balance Before Credit"
           },
           "credited_at": {
@@ -5172,7 +5404,7 @@
           },
           "pending_count": {
             "type": "integer",
-            "minimum": 0.0,
+            "minimum": 0,
             "title": "Pending Count"
           },
           "oldest_pending_occurred_at": {

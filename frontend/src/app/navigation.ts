@@ -13,6 +13,7 @@ const SECTIONS: readonly (NavItem & { permission: string })[] = [
   { to: "/risk", label: ru.nav.riskOverview, permission: PERMISSIONS.viewQuality, end: true },
   { to: "/risk/policy", label: ru.nav.policy, permission: PERMISSIONS.proposePolicy },
   { to: "/risk/models", label: ru.nav.models, permission: PERMISSIONS.viewQuality },
+  { to: "/risk/network", label: ru.nav.network, permission: PERMISSIONS.viewQuality },
   { to: "/risk/audit", label: ru.nav.audit, permission: PERMISSIONS.viewAudit },
 ];
 

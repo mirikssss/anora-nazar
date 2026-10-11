@@ -1,11 +1,12 @@
 // Примеры для формы предложения порога (правило «Интерфейс» п. 11): новое значение рядом с действующим,
-// обоснование — из справочника подсказок демо. Каждый раз новые.
+// у переключателя — противоположное; обоснование — из справочника подсказок демо. Каждый раз новые.
 import { formatThreshold } from "@/entities/policy";
 import { DEMO, pick } from "@/shared/demo";
 
 const SIGNIFICANT_DIGITS = 2;
 
-export function exampleValue(current: number): string {
+export function exampleValue(current: number | boolean): string {
+  if (typeof current === "boolean") return String(!current);
   const [low, high] = DEMO.policyChangeShare;
   const sign = pick([-1, 1] as const);
   const shifted = current * (1 + sign * (low + Math.random() * (high - low)));

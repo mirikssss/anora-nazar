@@ -11,7 +11,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Health */
+    /**
+     * Health
+     * @description version — коммит сборки образа; null — сборка без версии (стенд разработки).
+     */
     get: operations["health_v1_system_health_get"];
     put?: never;
     post?: never;
@@ -880,6 +883,12 @@ export interface components {
        * @description Очередь событий в узел стоит
        */
       queue_lag: boolean;
+      /**
+       * Network Unavailable
+       * @description Сеть кредиторов недоступна: оператор отвечает отказом на запросы этой песочницы
+       * @default false
+       */
+      network_unavailable: boolean;
     };
     /** FlagsPatch */
     FlagsPatch: {
@@ -889,6 +898,8 @@ export interface components {
       node_unavailable?: boolean | null;
       /** Queue Lag */
       queue_lag?: boolean | null;
+      /** Network Unavailable */
+      network_unavailable?: boolean | null;
     };
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -1456,7 +1467,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            [key: string]: string;
+            [key: string]: string | null;
           };
         };
       };

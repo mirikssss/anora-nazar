@@ -1,4 +1,5 @@
-// Кнопки сбоев имитатора банка: потерять итог, узел недоступен, очередь отстаёт, повтор с другой суммой.
+// Кнопки сбоев имитатора банка: потерять итог, узел недоступен, очередь отстаёт, сеть недоступна,
+// повтор с другой суммой.
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type SubmitEvent } from "react";
 
@@ -30,6 +31,7 @@ const SWITCHES: readonly { key: keyof FailureFlags; label: string; hint: string 
   { key: "lose_outcome", label: t.loseOutcome, hint: t.loseOutcomeHint },
   { key: "node_unavailable", label: t.nodeUnavailable, hint: t.nodeUnavailableHint },
   { key: "queue_lag", label: t.queueLag, hint: t.queueLagHint },
+  { key: "network_unavailable", label: t.networkUnavailable, hint: t.networkUnavailableHint },
 ];
 
 function nodeMessage(response: Record<string, unknown>): string | null {

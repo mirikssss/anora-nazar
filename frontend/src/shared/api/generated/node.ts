@@ -11,7 +11,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Health */
+    /**
+     * Health
+     * @description version — коммит сборки образа; null — сборка без версии (стенд разработки).
+     */
     get: operations["health_v1_system_health_get"];
     put?: never;
     post?: never;
@@ -697,6 +700,43 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/v1/network/notifications": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Receive Notification
+     * @description Оператор шлёт уведомление в контур песочницы с заголовком, в общий мир — без него.
+     */
+    post: operations["receive_notification_v1_network_notifications_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/v1/network/overview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Overview */
+    get: operations["overview_v1_network_overview_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1172,12 +1212,15 @@ export interface components {
       /** Recent */
       recent: number;
     };
-    /** EditableThreshold */
+    /**
+     * EditableThreshold
+     * @description Порог (число) или переключатель (true/false, например сеть кредиторов).
+     */
     EditableThreshold: {
       /** Path */
       path: string;
       /** Value */
-      value: number;
+      value: boolean | number;
     };
     /** EventEnvelope */
     EventEnvelope: {
@@ -1397,6 +1440,23 @@ export interface components {
       /** Phone Owner Match */
       phone_owner_match: boolean;
     };
+    /**
+     * MatchNotification
+     * @description Оператор → кредитор: у заявки ref появилось новое совпадение у другого кредитора.
+     */
+    MatchNotification: {
+      /** Notification Id */
+      notification_id: string;
+      /** Ref */
+      ref: string;
+      /** Kinds */
+      kinds: ("pinfl" | "phone" | "device" | "card" | "supplier_inn")[];
+      /**
+       * Occurred At
+       * Format: date-time
+       */
+      occurred_at: string;
+    };
     /** MeOut */
     MeOut: {
       /** User Code */
@@ -1439,6 +1499,64 @@ export interface components {
       metrics: {
         [key: string]: unknown;
       };
+    };
+    /**
+     * NetworkOverviewOut
+     * @description Страница «Сеть кредиторов»: переключатель из политики и счётчики оператора по своему контуру.
+     */
+    NetworkOverviewOut: {
+      /**
+       * Enabled
+       * @description Сеть включена действующей политикой контура
+       */
+      enabled: boolean;
+      /** Policy Version */
+      policy_version: string;
+      /** Contract */
+      contract: string;
+      /**
+       * Configured
+       * @description Адрес оператора задан в окружении узла
+       */
+      configured: boolean;
+      /**
+       * Available
+       * @description Оператор ответил сейчас
+       */
+      available: boolean;
+      /**
+       * Toggle Path
+       * @description Путь переключателя в предложении порогов со вторым подписантом
+       */
+      toggle_path: string;
+      /** Rules */
+      rules: {
+        [key: string]: unknown;
+      }[];
+      /**
+       * Operator
+       * @description Счётчики оператора по кредитору и контуру; null — не ответил
+       */
+      operator: {
+        [key: string]: unknown;
+      } | null;
+      /**
+       * Decisions
+       * @description Решения контура по статусу ответа сети
+       */
+      decisions: {
+        [key: string]: number;
+      };
+      /** Notifications */
+      notifications: number;
+    };
+    /** NotificationOut */
+    NotificationOut: {
+      /**
+       * Outcome
+       * @enum {string}
+       */
+      outcome: "marked" | "ignored" | "duplicate";
     };
     /** ParticipantDecisionIn */
     ParticipantDecisionIn: {
@@ -1537,7 +1655,7 @@ export interface components {
     ProposalIn: {
       /** Changes */
       changes: {
-        [key: string]: number;
+        [key: string]: boolean | number;
       };
       /** Reason */
       reason: string;
@@ -1553,7 +1671,7 @@ export interface components {
       base_version: string;
       /** Changes */
       changes: {
-        [key: string]: number;
+        [key: string]: boolean | number;
       };
       /** Reason */
       reason: string;
@@ -2143,7 +2261,7 @@ export interface operations {
         };
         content: {
           "application/json": {
-            [key: string]: string;
+            [key: string]: string | null;
           };
         };
       };
@@ -3280,6 +3398,59 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RiskOverviewOut"];
+        };
+      };
+    };
+  };
+  receive_notification_v1_network_notifications_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MatchNotification"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  overview_v1_network_overview_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NetworkOverviewOut"];
         };
       };
     };
