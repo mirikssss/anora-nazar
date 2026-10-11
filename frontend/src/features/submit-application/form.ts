@@ -29,6 +29,8 @@ export interface FormState {
   purpose: string;
   account: string;
   helperId: string;
+  /** Махалля помощника — из справочника платформы программ при выборе помощника, не вводится. */
+  helperMahalla: string;
   supplierInn: string;
   supplierAccount: string;
   itemCode: string;
@@ -60,6 +62,7 @@ export const EMPTY_FORM: FormState = {
   purpose: "",
   account: "",
   helperId: "",
+  helperMahalla: "",
   supplierInn: "",
   supplierAccount: "",
   itemCode: "",
@@ -88,6 +91,7 @@ export const FIELD_PATHS: Readonly<Record<string, TextKey>> = {
   "loan.purpose": "purpose",
   disbursement_account: "account",
   "program.helper_id": "helperId",
+  "program.helper_mahalla": "helperMahalla",
   "program.supplier_inn": "supplierInn",
   "program.supplier_account": "supplierAccount",
   "program.item_code": "itemCode",
@@ -161,6 +165,7 @@ export function toDraft(state: FormState, sessionRefs: string[]): ApplicationDra
             unit_price: integer(state.unitPrice),
             quantity: integer(state.quantity),
             district: state.district.trim(),
+            helper_mahalla: optional(state.helperMahalla),
           }
         : null,
     checks: { biometry: state.biometry, phone_owner_match: state.phoneOwnerMatch },

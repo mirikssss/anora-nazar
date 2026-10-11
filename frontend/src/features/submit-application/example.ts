@@ -1,11 +1,11 @@
-// Пример заявки для подсказок по Tab: каждый раз новый, в форматах мира (см. shared/demo).
+// Пример заявки для подсказок по Tab: каждый раз новый, в форматах мира (см. shared/demo). Филиал,
+// помощник хокима и поставщик берутся из справочников бэка по случайному номеру примера.
 import type { Branch } from "@/entities/branch";
+import type { Helper, Supplier } from "@/entities/program";
 import {
-  bankAccount,
   card,
   DEMO,
   deviceId,
-  helperId,
   intBetween,
   legalInn,
   logNormalFactor,
@@ -17,18 +17,38 @@ import {
 
 import type { Channel, TextKey } from "./form";
 
-type CommonKey = Exclude<
-  TextKey,
-  "branchId" | "employeeId" | "district" | "registrationMahalla" | "amount" | "termMonths"
->;
+type DirectoryKey =
+  | "branchId"
+  | "employeeId"
+  | "district"
+  | "registrationMahalla"
+  | "helperId"
+  | "helperMahalla"
+  | "supplierInn"
+  | "supplierAccount"
+  | "amount"
+  | "termMonths";
+type CommonKey = Exclude<TextKey, DirectoryKey>;
 
 export interface Example {
   common: Record<CommonKey, string>;
   loan: Record<Channel, { amount: string; termMonths: string }>;
-  /** Филиал и сотрудник примера выбираются из справочника бэка по случайному номеру. */
-  branchSeed: number;
-  employeeSeed: number;
+  /** Категория товара примера: по ней фильтруются поставщики. */
+  category: string;
+  seed: number;
   mahalla: number;
+}
+
+/** Справочники бэка, из которых пример берёт филиал, помощника и поставщика. */
+export interface ExampleContext {
+  channel: Channel;
+  branches: readonly Branch[];
+  branch: Branch | undefined;
+  /** Помощники и поставщики района доставки. */
+  helpers: readonly Helper[];
+  suppliers: readonly Supplier[];
+  /** Районы, где на платформе программ есть и помощники, и поставщики. */
+  programDistricts: ReadonlySet<string>;
 }
 
 export function makeExample(): Example {
@@ -46,9 +66,6 @@ export function makeExample(): Example {
       employerInn: legalInn(),
       purpose: pick(DEMO.purposes),
       account: card(),
-      helperId: helperId(),
-      supplierInn: legalInn(),
-      supplierAccount: bankAccount(),
       itemCode: item.code,
       unit: item.unit,
       unitPrice: String(unitPrice),
@@ -62,8 +79,8 @@ export function makeExample(): Example {
       // Программный займ покрывает договор поставки: сумма — цена за единицу на количество.
       program: { amount: String(unitPrice * quantity), termMonths: String(pick(DEMO.program.termMonths)) },
     },
-    branchSeed: intBetween(0, Number.MAX_SAFE_INTEGER),
-    employeeSeed: intBetween(0, Number.MAX_SAFE_INTEGER),
+    category: item.category,
+    seed: intBetween(0, Number.MAX_SAFE_INTEGER),
     mahalla: intBetween(1, DEMO.helpersPerDistrict),
   };
 }
@@ -72,30 +89,64 @@ function seeded<T>(items: readonly T[], seed: number): T | undefined {
   return items[seed % Math.max(items.length, 1)];
 }
 
-/** Значение примера для поля формы; филиал и район — из справочника филиалов бэка. */
-export function exampleValue(
-  example: Example,
-  key: TextKey,
-  channel: Channel,
-  branches: readonly Branch[],
-  branch: Branch | undefined,
-): string {
+/** Филиал примера: выбранный проверяющим, иначе — случайный из справочника. Для программного займа —
+ *  только филиал района, где есть помощники и поставщики: иначе заявку не собрать из справочников. */
+export function exampleBranch(example: Example, context: ExampleContext): Branch | undefined {
+  if (context.branch !== undefined) return context.branch;
+  const candidates =
+    context.channel === "program"
+      ? context.branches.filter((branch) => context.programDistricts.has(branch.district))
+      : context.branches;
+  // Пока справочники программ не пришли, кандидатов нет — берём любой филиал, а не оставляем пустым.
+  return seeded(candidates.length > 0 ? candidates : context.branches, example.seed);
+}
+
+export function exampleHelper(example: Example, helpers: readonly Helper[]): Helper | undefined {
+  return seeded(helpers, example.seed);
+}
+
+export function exampleSupplier(example: Example, suppliers: readonly Supplier[]): Supplier | undefined {
+  return seeded(suppliers, example.seed);
+}
+
+export function helperMahalla(helper: Helper): string {
+  return `${helper.district}, ${helper.mahalla}`;
+}
+
+/** Значение примера для поля формы; «» — справочник ещё не загружен или пуст. */
+export function exampleValue(example: Example, key: TextKey, context: ExampleContext): string {
+  const branch = exampleBranch(example, context);
+  const helper = exampleHelper(example, context.helpers);
+  const supplier = exampleSupplier(example, context.suppliers);
   switch (key) {
     case "branchId":
-      return seeded(branches, example.branchSeed)?.id ?? "";
+      return branch?.id ?? "";
     case "employeeId":
-      return seeded(branch?.employees ?? [], example.employeeSeed)?.id ?? "";
+      return seeded(branch?.employees ?? [], example.seed)?.id ?? "";
     case "district":
-      return (branch ?? seeded(branches, example.branchSeed))?.district ?? "";
-    case "registrationMahalla": {
-      // Формат мира: «<район>, махалля N» — по району выбранного филиала.
-      const district = (branch ?? seeded(branches, example.branchSeed))?.district;
-      return district === undefined ? "" : `${district}, махалля ${String(example.mahalla)}`;
-    }
+      return branch?.district ?? "";
+    case "registrationMahalla":
+      // Честный пример: в программе заявитель из махалли своего помощника (иначе — сигнал зоны 3).
+      // Формат мира: «<район>, махалля N».
+      if (context.channel === "program" && helper !== undefined) return helperMahalla(helper);
+      return branch === undefined ? "" : `${branch.district}, махалля ${String(example.mahalla)}`;
+    case "helperId":
+      return helper?.id ?? "";
+    case "helperMahalla":
+      return helper === undefined ? "" : helperMahalla(helper);
+    case "supplierInn":
+      return supplier?.inn ?? "";
+    case "supplierAccount":
+      return supplier?.account ?? "";
     case "amount":
     case "termMonths":
-      return example.loan[channel][key];
+      return example.loan[context.channel][key];
     default:
       return example.common[key];
   }
+}
+
+/** Категория товара для фильтра поставщиков: по коду товара из формы, иначе — товара примера. */
+export function itemCategory(itemCode: string, example: Example): string {
+  return DEMO.items.find((item) => item.code === itemCode.trim())?.category ?? example.category;
 }

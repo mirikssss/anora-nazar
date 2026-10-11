@@ -4,7 +4,6 @@ export const DEMO = {
   applicantAgeYears: [21, 65] as const,
   phoneOperatorCodes: ["90", "91", "93", "94", "95", "97", "98", "99", "33", "88"],
   cardPrefixes: ["8600", "9860"],
-  helperDistricts: 12,
   helpersPerDistrict: 10,
   online: {
     amount: { min: 1_000_000, max: 50_000_000, step: 500_000 },
@@ -13,14 +12,42 @@ export const DEMO = {
   program: { termMonths: [12, 24, 36, 48, 60] },
   purposes: ["Покупка", "Ремонт", "Лечение", "Учёба", "Свадьба"],
   streets: ["Навои", "Амира Темура", "Бабура", "Мукими", "Фурката", "Бунёдкор", "Мустакиллик"],
-  /** Товары программ: код, единица, медиана цены за единицу (сум), разброс, количество — как в мире. */
+  /** Товары программ: код, категория (как у поставщиков), единица, медиана цены за единицу (сум), разброс, количество — как в мире. */
   items: [
-    { code: "cow", unit: "head", median: 12_000_000, sigma: 0.12, quantity: [1, 3] },
-    { code: "sheep", unit: "head", median: 2_200_000, sigma: 0.12, quantity: [3, 15] },
-    { code: "greenhouse", unit: "m2", median: 160_000, sigma: 0.15, quantity: [100, 600] },
-    { code: "sewing_machine", unit: "piece", median: 3_500_000, sigma: 0.1, quantity: [1, 6] },
-    { code: "mini_tractor", unit: "piece", median: 65_000_000, sigma: 0.1, quantity: [1, 1] },
-    { code: "drip_irrigation", unit: "ha", median: 18_000_000, sigma: 0.15, quantity: [1, 4] },
+    { code: "cow", category: "livestock", unit: "head", median: 12_000_000, sigma: 0.12, quantity: [1, 3] },
+    { code: "sheep", category: "livestock", unit: "head", median: 2_200_000, sigma: 0.12, quantity: [3, 15] },
+    {
+      code: "greenhouse",
+      category: "greenhouse",
+      unit: "m2",
+      median: 160_000,
+      sigma: 0.15,
+      quantity: [100, 600],
+    },
+    {
+      code: "sewing_machine",
+      category: "equipment",
+      unit: "piece",
+      median: 3_500_000,
+      sigma: 0.1,
+      quantity: [1, 6],
+    },
+    {
+      code: "mini_tractor",
+      category: "equipment",
+      unit: "piece",
+      median: 65_000_000,
+      sigma: 0.1,
+      quantity: [1, 1],
+    },
+    {
+      code: "drip_irrigation",
+      category: "greenhouse",
+      unit: "ha",
+      median: 18_000_000,
+      sigma: 0.15,
+      quantity: [1, 4],
+    },
   ],
   priceStep: 1_000,
   /** Примеры заметок проверяющего и оснований решений по заявке. */

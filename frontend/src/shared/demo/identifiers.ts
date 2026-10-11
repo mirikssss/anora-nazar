@@ -50,17 +50,7 @@ export function legalInn(): string {
   return `${pick(["2", "3"])}${digits(8)}`;
 }
 
-/** Счёт в банке Узбекистана — 20 цифр. */
-export function bankAccount(): string {
-  return `${pick(["2", "1"])}${digits(19)}`;
-}
-
 /** Карта для зачисления онлайн-микрозайма. */
 export function card(): string {
   return `${pick(DEMO.cardPrefixes)}${digits(12)}`;
-}
-
-/** Код помощника хокима — как в мире: HLP-район-номер. */
-export function helperId(): string {
-  return `HLP-${pad(intBetween(1, DEMO.helperDistricts), 3)}-${pad(intBetween(1, DEMO.helpersPerDistrict), 2)}`;
 }

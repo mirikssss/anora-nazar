@@ -3,6 +3,7 @@ import { useState, type SubmitEvent } from "react";
 
 import type { Application } from "@/entities/application";
 import { useBranches } from "@/entities/branch";
+import { useHelpers, useSuppliers } from "@/entities/program";
 import { ApiError, errorMessage } from "@/shared/api";
 import { label, ru } from "@/shared/i18n/ru";
 import { formatSum, parseInteger } from "@/shared/lib/format";
@@ -25,7 +26,17 @@ import {
   type TextKey,
   unmappedMessages,
 } from "./form";
-import { exampleValue, makeExample } from "./example";
+import {
+  exampleBranch,
+  exampleHelper,
+  exampleSupplier,
+  exampleValue,
+  helperMahalla,
+  itemCategory,
+  makeExample,
+  type Example,
+  type ExampleContext,
+} from "./example";
 import { useSubmitApplication } from "./useSubmitApplication";
 
 const t = ru.conveyor;
@@ -55,8 +66,56 @@ export function ApplicationForm({ onSubmitted }: { onSubmitted: (application: Ap
 
   const branchList = branches.data ?? [];
   const branch = branchList.find((item) => item.id === state.branchId);
+  // Справочники платформы программ небольшие: грузятся целиком один раз и фильтруются по району доставки.
+  const helpers = useHelpers(null);
+  const suppliers = useSuppliers(null, null);
+  const allHelpers = helpers.data ?? [];
+  const allSuppliers = suppliers.data ?? [];
+  const programDistricts = new Set(
+    allHelpers
+      .map((item) => item.district)
+      .filter((name) => allSuppliers.some((item) => item.district === name)),
+  );
+  const exampleDistrict = exampleBranch(example, {
+    channel: state.channel,
+    branches: branchList,
+    branch,
+    helpers: [],
+    suppliers: [],
+    programDistricts,
+  })?.district;
+  const district = state.district.trim() || exampleDistrict || "";
+  const category = itemCategory(state.itemCode, example);
+  const context: ExampleContext = {
+    channel: state.channel,
+    branches: branchList,
+    branch,
+    helpers: allHelpers.filter((item) => item.district === district),
+    suppliers: allSuppliers.filter((item) => item.district === district && item.category === category),
+    programDistricts,
+  };
+
+  // Пример, из которого ещё не подставлены помощник и поставщик: справочники нового района были в пути.
+  const [pendingFill, setPendingFill] = useState<Example | null>(null);
+  // Подстановка при отрисовке, а не в эффекте (приём React «состояние из предыдущей отрисовки»):
+  // как только справочники района пришли, пример дописывает помощника и поставщика один раз.
+  if (pendingFill !== null) {
+    const helper = exampleHelper(pendingFill, context.helpers);
+    const supplier = exampleSupplier(pendingFill, context.suppliers);
+    if (helper !== undefined && supplier !== undefined) {
+      setPendingFill(null);
+      setState((current) => ({
+        ...current,
+        helperId: current.helperId || helper.id,
+        helperMahalla: current.helperMahalla || helperMahalla(helper),
+        supplierInn: current.supplierInn || supplier.inn,
+        supplierAccount: current.supplierAccount || supplier.account,
+      }));
+    }
+  }
+
   const suggestion = (key: TextKey) => {
-    const value = exampleValue(example, key, state.channel, branchList, branch);
+    const value = exampleValue(example, key, context);
     return value === ""
       ? undefined
       : {
@@ -68,16 +127,31 @@ export function ApplicationForm({ onSubmitted }: { onSubmitted: (application: Ap
   };
   /** Каждое нажатие — новый заявитель целиком; канал и итоги проверок остаются выбором проверяющего. */
   const fillExample = () => {
-    const branchId = exampleValue(example, "branchId", state.channel, branchList, undefined);
-    const chosen = branchList.find((item) => item.id === branchId);
-    const next: FormState = { ...state, branchId };
+    const chosen = exampleBranch(example, context);
+    const next: FormState = { ...state };
     for (const key of Object.values(FIELD_PATHS)) {
-      if (key !== "branchId") next[key] = exampleValue(example, key, state.channel, branchList, chosen);
+      next[key] = exampleValue(example, key, { ...context, branch: chosen });
     }
     setState(next);
     setErrors({});
+    setPendingFill(next.helperId === "" || next.supplierInn === "" ? example : null);
     setExample(makeExample());
   };
+  const chooseHelper = (helperId: string) => {
+    const helper = context.helpers.find((item) => item.id === helperId);
+    setState((current) => ({
+      ...current,
+      helperId,
+      helperMahalla: helper === undefined ? "" : helperMahalla(helper),
+    }));
+  };
+  const chooseSupplier = (inn: string) => {
+    const supplier = context.suppliers.find((item) => item.inn === inn);
+    setState((current) => ({ ...current, supplierInn: inn, supplierAccount: supplier?.account ?? "" }));
+  };
+  const directoryError = (query: { isError: boolean; error: unknown }) =>
+    query.isError ? errorMessage(query.error) : undefined;
+  const selectedSupplier = context.suppliers.find((item) => item.inn === state.supplierInn);
 
   const text = (
     key: TextKey,
@@ -140,7 +214,14 @@ export function ApplicationForm({ onSubmitted }: { onSubmitted: (application: Ap
               }))}
               error={shownErrors.branchId ?? (branches.isError ? errorMessage(branches.error) : undefined)}
               onChange={(event) => {
-                setState((current) => ({ ...current, branchId: event.target.value, employeeId: "" }));
+                // Другой филиал — другой район: помощник прежнего района к заявке не подходит.
+                setState((current) => ({
+                  ...current,
+                  branchId: event.target.value,
+                  employeeId: "",
+                  helperId: "",
+                  helperMahalla: "",
+                }));
               }}
             />
             <SelectField
@@ -190,10 +271,41 @@ export function ApplicationForm({ onSubmitted }: { onSubmitted: (application: Ap
           <fieldset className={styles.section}>
             <legend className={styles.legend}>{t.sections.program}</legend>
             <div className={styles.grid}>
-              {text("helperId", ru.application.helper, t.placeholders.helper)}
               {text("district", ru.application.district, t.placeholders.district)}
-              {text("supplierInn", t.labels.supplierInn, t.placeholders.supplierInn, { numeric: true })}
-              {text("supplierAccount", t.labels.supplierAccount, t.placeholders.supplierAccount)}
+              <SelectField
+                label={ru.application.helper}
+                value={state.helperId}
+                placeholder={helpers.isPending ? t.directoryLoading : t.helperPlaceholder}
+                options={context.helpers.map((item) => ({
+                  value: item.id,
+                  label: `${item.mahalla} · ${item.id}`,
+                }))}
+                hint={helpers.isSuccess && context.helpers.length === 0 ? t.directoryEmpty : undefined}
+                error={shownErrors.helperId ?? directoryError(helpers)}
+                onChange={(event) => {
+                  chooseHelper(event.target.value);
+                }}
+              />
+              <SelectField
+                label={ru.application.supplier}
+                value={state.supplierInn}
+                placeholder={suppliers.isPending ? t.directoryLoading : t.supplierPlaceholder}
+                options={context.suppliers.map((item) => ({
+                  value: item.inn,
+                  label: `${item.name} · ${item.inn}`,
+                }))}
+                hint={
+                  selectedSupplier !== undefined
+                    ? `${t.labels.supplierAccount}: ${selectedSupplier.account}`
+                    : suppliers.isSuccess && context.suppliers.length === 0
+                      ? t.directoryEmpty
+                      : undefined
+                }
+                error={shownErrors.supplierInn ?? shownErrors.supplierAccount ?? directoryError(suppliers)}
+                onChange={(event) => {
+                  chooseSupplier(event.target.value);
+                }}
+              />
               {text("itemCode", ru.application.item, t.placeholders.item)}
               {text("unit", t.labels.unit, t.placeholders.unit)}
               {text("unitPrice", ru.application.unitPrice, t.placeholders.amount, {
