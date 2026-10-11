@@ -63,6 +63,7 @@ def build_snapshot(plan: ApplicationPlan, application_id: str, checks: Mandatory
             unit_price=part.unit_price,
             quantity=part.quantity,
             district=part.helper.district,
+            helper_mahalla=f"{part.helper.district}, {part.helper.mahalla}",
         )
     online = plan.channel == "online"
     return ApplicationSnapshot(
@@ -75,6 +76,7 @@ def build_snapshot(plan: ApplicationPlan, application_id: str, checks: Mandatory
             device_id=plan.device_id,
             address=plan.address,
             employer_inn=plan.person.employer_inn,
+            registration_mahalla=f"{plan.person.district}, {plan.person.mahalla}",
         ),
         loan=Loan(amount=plan.amount, term_months=plan.term_months),
         disbursement_account=plan.person.account if online else None,

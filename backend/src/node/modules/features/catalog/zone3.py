@@ -31,6 +31,14 @@ BOTH: tuple[FeaturePoint, ...] = ("T1", "T4")
 ZONE3 = (
     _feature("price_robust_z", T4, "index", "по уровням сравнения", "unknown", "F3_PRICE_ABOVE_COMPARABLES"),
     _feature("price_comparables_level", T4, "index", "по уровням сравнения", "unknown", None),
+    _feature(
+        "applicant_outside_helper_mahalla",
+        T4,
+        "mip",
+        "момент заявки",
+        "source_unavailable",
+        "F3_APPLICANT_OUTSIDE_HELPER_MAHALLA",
+    ),
     _feature("supplier_age_days", T4, "registry", "вся история", "source_unavailable", "F3_SUPPLIER_NEW"),
     _feature("supplier_concentration_ratio", T4, "index", "90 дней", "not_applicable", "F3_SUPPLIER_CONCENTRATION"),
     _feature("branch_supplier_hhi", T4, "index", "90 дней", "not_applicable", "F3_SUPPLIER_CONCENTRATION"),

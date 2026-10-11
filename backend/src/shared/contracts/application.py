@@ -24,6 +24,7 @@ class Applicant(_Strict):
     device_id: str | None = Field(default=None, min_length=1, max_length=128)
     address: str | None = Field(default=None, min_length=1, max_length=512)
     employer_inn: str | None = None
+    registration_mahalla: str | None = Field(default=None, min_length=1, max_length=256)  # прописка, МИП
 
     @field_validator("pinfl")
     @classmethod
@@ -72,6 +73,7 @@ class ProgramDetails(_Strict):
     unit_price: int = Field(gt=0)
     quantity: int = Field(gt=0)
     district: str = Field(min_length=1, max_length=128)
+    helper_mahalla: str | None = Field(default=None, min_length=1, max_length=256)  # с платформы программ
 
     @field_validator("supplier_inn")
     @classmethod

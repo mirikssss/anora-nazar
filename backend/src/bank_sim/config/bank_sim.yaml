@@ -22,7 +22,7 @@ http:
 database:
   pool_size: 10
 
-history:                          # прогон истории синтетического мира в узел — предложено
+history:                          # прогон истории синтетического мира в узел
   params_path: world/params/world-v1.yaml   # от корня пакетов backend/src
   batch_size: 200                 # элементов в одном запросе (у узла предел 500)
   timeout_seconds: 300            # пакет идёт дольше обычного вызова

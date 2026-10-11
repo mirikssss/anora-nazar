@@ -35,7 +35,7 @@ outbox:
         - permit.finished
 
 history:
-  max_batch: 500                  # предложено: элементов истории в одном запросе прогона
+  max_batch: 500                  # элементов истории в одном запросе прогона
 
 http:
   timeout_seconds: 5

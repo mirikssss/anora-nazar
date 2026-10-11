@@ -235,6 +235,18 @@ def zone2_features(view: GroupView, first_credit_share: float | None) -> dict[st
     }
 
 
+def _place(value: str) -> str:
+    return " ".join(value.casefold().split())
+
+
+def outside_helper_mahalla(snapshot: ApplicationSnapshot) -> bool | None:
+    """Заявитель прописан не в махалле помощника хокима (Блок 3, зона 3); нет данных МИП или платформы — None."""
+    program, home = snapshot.program, snapshot.applicant.registration_mahalla
+    if program is None or program.helper_mahalla is None or home is None:
+        return None
+    return _place(home) != _place(program.helper_mahalla)
+
+
 def zone3_features(
     snapshot: ApplicationSnapshot,
     facts: Facts,
@@ -248,6 +260,7 @@ def zone3_features(
     if program is not None:
         values |= price_features(program.unit_price, prices, cfg.zone3.pricing)
         values |= {
+            "applicant_outside_helper_mahalla": outside_helper_mahalla(snapshot),
             "supplier_age_days": _company(facts.supplier, as_of)[0],
             "supplier_concentration_ratio": concentrations.supplier_ratio,
             "branch_supplier_hhi": concentrations.branch_supplier_hhi,
